@@ -28,7 +28,7 @@ Copyright (c) 2009-2017 Tsuda Kageyu
 
 ## cameraunlock-core
 
-- **Version:** commit `514352d83d3cde2368bdfb937235823d96efe119`
+- **Version:** commit `3465659888b2270addac9de0b2a728f59a00360c`
 - **License:** MIT
 - **Upstream:** https://github.com/itsloopyo/cameraunlock-core
 - **Usage:** The shared tracking pipeline (OpenTrack receiver, pose processing, smoothing, Unreal runtime helpers).
