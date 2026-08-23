@@ -82,8 +82,14 @@ Copy-Item -Force $asi (Join-Path $nexusExeDir.FullName $asiName)
 # the .asi, not at the ZIP root. This archive is extracted over the game
 # folder, so a root-level file lands in the game's install directory, where
 # nothing this mod owns would ever remove it again.
-foreach ($doc in @('LICENSE', 'THIRD-PARTY-NOTICES.md')) {
-    Copy-Item -Force (Join-Path $projectDir $doc) $nexusExeDir.FullName
+# A missing notice throws rather than being skipped: guarding the copy with a
+# Test-Path turns a licence violation into a green build that ships anyway.
+foreach ($doc in @('LICENSE', 'THIRD-PARTY-NOTICES.md', 'README.md')) {
+    $docSrc = Join-Path $projectDir $doc
+    if (-not (Test-Path $docSrc)) {
+        throw "Required notice file not found: $doc. Every published ZIP is a binary distribution and must carry it."
+    }
+    Copy-Item -Force $docSrc $nexusExeDir.FullName
 }
 
 $nexusZip = Join-Path $releaseDir "AssettoCorsaRallyHeadTracking-v$version-nexus.zip"
