@@ -30,9 +30,4 @@ std::size_t FindCameraManagerFieldOffset(std::uintptr_t manager);
 // FindCameraManagerFieldOffset would silently pick between.
 void LogCameraManagerOwner(std::uintptr_t manager);
 
-// Every reflected property on the camera manager's class and its bases. This
-// is what turns the camera cache from an offset that looked right into one the
-// engine itself reports.
-void LogCameraManagerProperties(std::uintptr_t manager);
-
 }  // namespace acr_ht::ue

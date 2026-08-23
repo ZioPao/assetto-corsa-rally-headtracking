@@ -37,9 +37,6 @@ bool FindProperty(std::uintptr_t structOrClass, const char* name, PropertyInfo& 
 // into unrelated memory.
 std::uintptr_t StructOfProperty(const PropertyInfo& prop);
 
-// Every reflected property on `structOrClass` and its bases, to the log.
-void LogProperties(std::uintptr_t structOrClass);
-
 // True if `structOrClass` or any of its bases is named `name`. The way to ask
 // "is this a car" about an object whose own class is a per-vehicle blueprint:
 // the blueprint name changes with every car, the native base it derives from

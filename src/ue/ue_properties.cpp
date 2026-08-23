@@ -1,7 +1,5 @@
 #include "ue/ue_properties.h"
 
-#include "logging.h"
-
 #include <cameraunlock/unreal/ue_runtime.h>
 
 namespace acr_ht::ue {
@@ -129,23 +127,6 @@ bool DerivesFrom(std::uintptr_t structOrClass, const char* name) {
         current = super;
     }
     return false;
-}
-
-void LogProperties(std::uintptr_t structOrClass) {
-    int count = 0;
-    std::uintptr_t lastOwner = 0;
-    ForEachProperty(structOrClass, [&](std::uintptr_t owner, const PropertyInfo& info) {
-        if (owner != lastOwner) {
-            lastOwner = owner;
-            Log::Line("[props] %s:", cu::ObjectName(owner).c_str());
-        }
-        Log::Line("[props]   +0x%04zX  size %-5d  %s", info.offset, info.elementSize,
-                  info.name.c_str());
-        ++count;
-        return false;
-    });
-    Log::Line("[props] %d reflected properties on %s and its bases", count,
-              cu::ObjectName(structOrClass).c_str());
 }
 
 }  // namespace acr_ht::ue

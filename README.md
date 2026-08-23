@@ -96,7 +96,7 @@ Hotkeys are codes, not key names: `ToggleKey=Insert` is refused, `ToggleKey=0x2D
 
 ## Troubleshooting
 
-**Nothing happens in game.** Read `AssettoCorsaRallyHeadTracking.log` next to `acr.exe`. It records every step: whether the loader engaged, whether Unreal's object table was found, whether the camera was hooked, and what the first few frames looked like.
+**Nothing happens in game.** Read `HeadTracking.log` next to `acr.exe`. It records every step: whether the loader engaged, whether Unreal's object table was found, whether the camera was hooked, and what the first few frames looked like. It is rewritten from scratch on every launch, so it always covers the run you just had; the run before it is kept alongside as `HeadTracking.prev.log`, which is the one to send if the game crashed and you relaunched to check.
 
 **"the object table never appeared" or "no camera manager appeared".** The mod waits for the engine to build a world before it hooks anything, and stays dormant if that never happens. Load into a session and check the log again.
 

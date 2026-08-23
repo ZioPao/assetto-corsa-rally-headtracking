@@ -4,7 +4,6 @@
 
 #include "logging.h"
 #include "ue/ue_layout.h"
-#include "ue/ue_properties.h"
 
 #include <cameraunlock/unreal/ue_runtime.h>
 
@@ -117,16 +116,6 @@ void LogCameraManagerOwner(std::uintptr_t manager) {
                   "not the one driving the view",
                   static_cast<unsigned long long>(manager));
     }
-}
-
-void LogCameraManagerProperties(std::uintptr_t manager) {
-    std::uintptr_t uclass = 0;
-    if (!cu::SafeReadPtr(manager + kUObject_ClassPrivate, uclass) || !uclass) {
-        Log::Line("[props] camera manager 0x%llX has no readable class",
-                  static_cast<unsigned long long>(manager));
-        return;
-    }
-    LogProperties(uclass);
 }
 
 }  // namespace acr_ht::ue

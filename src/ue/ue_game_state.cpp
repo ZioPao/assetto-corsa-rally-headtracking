@@ -39,7 +39,15 @@ constexpr const char* kCarPawnBaseClass = "CarAvatar";
 // one - each following a different class. A single-entry cache thrashes between
 // them, and each miss costs a DerivesFrom walk and a log line, on the render
 // path, every frame.
-constexpr int kVerdictCacheSize = 4;
+//
+// Sized off what a real session actually cycles through, not off a guess: one
+// short run went through the menu controller, the orbit camera, the cinematic
+// camera actor, the race controller, a bare Actor, the service-park camera and
+// the car itself - seven, and the cinematic camera came back after it had
+// already been evicted. Anything that ring-buffers below that re-derives and
+// re-announces classes the mod has already decided about, for the rest of the
+// session.
+constexpr int kVerdictCacheSize = 16;
 
 struct VerdictEntry {
     std::uintptr_t uclass = 0;
@@ -62,6 +70,15 @@ void RememberVerdict(std::uintptr_t uclass, bool verdict) {
 }
 
 bool g_haveTarget = false;
+
+// Backstop under the cache above: a session that somehow does cycle through
+// more classes than it holds re-derives - and would re-announce - an evicted
+// class every time it comes back, which is a log line on the render path with
+// no bound on it. Capped rather than deduplicated further, because by the time
+// this many distinct view targets have been seen the log has already said
+// everything a bug report needs.
+constexpr int kMaxVerdictLines = 24;
+int g_announced = 0;
 
 }  // namespace
 
@@ -142,8 +159,14 @@ bool IsDrivingViewTarget(std::uintptr_t cameraManager, const ViewTargetOffsets& 
     // path.
     const bool verdict = DerivesFrom(targetClass, kCarPawnBaseClass);
     RememberVerdict(targetClass, verdict);
-    Log::Line("[state] view target: %s - head tracking %s",
-              cu::ClassName(target).c_str(), verdict ? "following" : "held");
+    if (g_announced < kMaxVerdictLines) {
+        ++g_announced;
+        Log::Line("[state] view target: %s - head tracking %s",
+                  cu::ClassName(target).c_str(), verdict ? "following" : "held");
+        if (g_announced == kMaxVerdictLines) {
+            Log::Line("[state] further view-target changes will not be logged.");
+        }
+    }
     return verdict;
 }
 

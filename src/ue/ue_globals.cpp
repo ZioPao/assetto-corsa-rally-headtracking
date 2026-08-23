@@ -231,7 +231,14 @@ bool ValidateObjectArray(std::uintptr_t arrayAddr, std::int32_t numChunks) {
     // not among the objects inspected. Report it rather than accepting on the
     // weaker evidence: a partial match is how a wrong candidate gets adopted
     // and then fails much later, somewhere unrelated.
-    if (resolvable > 0) {
+    //
+    // Once per session, not once per rejection: the discovery poll re-runs this
+    // whole scan twice a second until the engine has built its table, so an
+    // unlatched line puts hundreds of copies of itself in the log during a cold
+    // launch and buries the boot sequence a reader came for.
+    static bool logged = false;
+    if (resolvable > 0 && !logged) {
+        logged = true;
         Log::Line("[ue] object table candidate at 0x%llX decoded %d class names but no "
                   "/Script/CoreUObject package - rejected",
                   static_cast<unsigned long long>(arrayAddr), resolvable);

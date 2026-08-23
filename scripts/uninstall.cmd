@@ -25,11 +25,11 @@
 :: --- CONFIG BLOCK ---
 set "GAME_ID=assetto-corsa-rally"
 set "MOD_DISPLAY_NAME=Assetto Corsa Rally Head Tracking"
-set "MOD_DLLS=AssettoCorsaRallyHeadTracking.asi AssettoCorsaRallyHeadTracking.log AssettoCorsaRallyHeadTracking.prev.log"
+set "MOD_DLLS=AssettoCorsaRallyHeadTracking.asi HeadTracking.log HeadTracking.prev.log"
 set "MOD_INTERNAL_NAME=AssettoCorsaRallyHeadTracking"
 set "STATE_FILE=.headtracking-state.json"
 set "FRAMEWORK_TYPE=ASILoader"
-set "LEGACY_DLLS="
+set "LEGACY_DLLS=AssettoCorsaRallyHeadTracking.log AssettoCorsaRallyHeadTracking.prev.log"
 
 :: --- Loader-specific config (leave the ones that don't apply blank) ---
 :: MonoCecil: used to find + restore the original Assembly-CSharp.dll.

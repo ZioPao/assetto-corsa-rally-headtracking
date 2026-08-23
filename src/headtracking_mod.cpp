@@ -255,7 +255,6 @@ bool BringUpCameraHook(std::uintptr_t moduleBase, std::size_t moduleSize) {
         return false;
     }
     ue::LogCameraManagerOwner(manager);
-    ue::LogCameraManagerProperties(manager);
 
     if (!InstallCameraHook(moduleBase, moduleSize, manager, g_config.near_clip_cm)) {
         Log::Line("[boot] the camera could not be hooked - mod is inert, game runs vanilla.");
@@ -282,8 +281,8 @@ void Bootstrap() {
     // start the game from anywhere, and a bare relative name then drops the log
     // wherever that happens to be - or fails to create it at all - exactly when
     // a user is being asked to send one.
-    Log::Open(haveExeDir ? exeDirWide + L"\\AssettoCorsaRallyHeadTracking.log"
-                         : std::wstring(L"AssettoCorsaRallyHeadTracking.log"));
+    Log::Open(haveExeDir ? exeDirWide + L"\\HeadTracking.log"
+                         : std::wstring(L"HeadTracking.log"));
     Log::Line("=== Assetto Corsa Rally Head Tracking ===");
 
     if (!haveExeDir) {

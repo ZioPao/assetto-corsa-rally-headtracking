@@ -27,7 +27,7 @@ if (-not $GamePath -or -not (Test-Path $GamePath)) {
 
 $exeDir = Join-Path $GamePath 'acr/Binaries/Win64'
 $exe    = Join-Path $exeDir 'acr.exe'
-$log    = Join-Path $exeDir 'AssettoCorsaRallyHeadTracking.log'
+$log    = Join-Path $exeDir 'HeadTracking.log'
 
 if (-not (Test-Path $exe)) { throw "acr.exe not found at $exe" }
 if (-not $Append -and (Test-Path $log)) { Remove-Item $log -Force }
