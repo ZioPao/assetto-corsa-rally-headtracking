@@ -1,8 +1,8 @@
 # Assetto Corsa Rally Head Tracking
 
-![Mod GIF](https://raw.githubusercontent.com/itsloopyo/assetto-corsa-rally-headtracking/main/assets/readme-clip.gif)
+![Assetto Corsa Rally running with this mod](https://raw.githubusercontent.com/itsloopyo/assetto-corsa-rally-headtracking/main/assets/readme-clip.gif)
 
-An unofficial 6DOF head tracking mod for Assetto Corsa Rally that moves the camera with your head while the car and your inputs stay untouched, driven by any OpenTrack-compatible tracker, no VR headset required.
+An unofficial head tracking mod for Assetto Corsa Rally that moves the camera with your head while your wheel or controller keeps steering, driven by a webcam, phone, or any OpenTrack compatible tracker, with no VR headset required.
 
 ## Requirements
 
