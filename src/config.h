@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 
+#include "cameraunlock/math/smoothing_utils.h"
+
 namespace acr_ht {
 
 struct Config {
@@ -31,8 +33,8 @@ struct Config {
     // machine is already steady, so local_smoothing is 0.0 and nothing floors
     // it; a phone on WiFi jitters over the network, which is what
     // remote_smoothing is for.
-    float local_smoothing = 0.0f;
-    float remote_smoothing = 0.15f;
+    float local_smoothing = static_cast<float>(cameraunlock::math::kDefaultLocalSmoothing);
+    float remote_smoothing = static_cast<float>(cameraunlock::math::kDefaultRemoteSmoothing);
 
     // Near clip plane, in centimetres, used while head tracking is driving the
     // view. The game ships 5 cm, which is further from the eye than the
