@@ -4,6 +4,10 @@
 
 An unofficial head tracking mod for Assetto Corsa Rally that moves the camera with your head while your wheel or controller keeps steering, driven by OpenTrack over UDP, with no VR headset required.
 
+## Features
+
+- **Works with any OpenTrack compatible tracker** - free options available for PC, iOS and Android
+
 ## Requirements
 
 - [Assetto Corsa Rally](https://store.steampowered.com/app/3917090/) on Steam, a legitimately purchased copy.
@@ -11,6 +15,13 @@ An unofficial head tracking mod for Assetto Corsa Rally that moves the camera wi
 - Windows 10 or 11, 64-bit.
 
 ## Installation
+
+### Lopari
+
+Download [Lopari](https://lopari.app), choose **Assetto Corsa Rally**, and click
+**Play with head tracking**.
+
+### Standalone Installer
 
 1. Download the installer ZIP from the [Releases](https://github.com/itsloopyo/assetto-corsa-rally-headtracking/releases) page.
 2. Extract it anywhere.
