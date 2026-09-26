@@ -1,6 +1,6 @@
 // The boundary checks every value read from HeadTracking.ini passes through.
 //
-// IniReader parses floats with strtod, which accepts "nan" and "inf" and
+// The frozen reader parses floats with strtod, which accepts "nan" and "inf" and
 // overflows a literal like 1e400 to +inf. Anything that gets past here reaches
 // the smoothing math, the quaternion, and from there the camera transform this
 // mod writes into a live engine - where a NaN is a black screen with nothing in
