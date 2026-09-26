@@ -3,8 +3,8 @@
 int RunCameraTransformTests();
 int RunCleanPoseCacheTests();
 int RunConfigSanitizeTests();
-int RunConfigTests();
 int RunExePathTests();
+int RunLegacyReaderTests();
 
 int main() {
     std::cout << "Assetto Corsa Rally Head Tracking Tests\n";
@@ -14,8 +14,8 @@ int main() {
     failures += RunCameraTransformTests();
     failures += RunCleanPoseCacheTests();
     failures += RunConfigSanitizeTests();
-    failures += RunConfigTests();
     failures += RunExePathTests();
+    failures += RunLegacyReaderTests();
 
     if (failures == 0) {
         std::cout << "All tests passed!\n";

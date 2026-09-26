@@ -6,7 +6,7 @@
 // mod writes into a live engine - where a NaN is a black screen with nothing in
 // the log to explain it.
 
-#include "config_sanitize.h"
+#include "legacy_config/config_sanitize.h"
 #include "test_support.h"
 
 #include <cmath>
@@ -27,7 +27,7 @@ constexpr float kLocalDefault  = 0.0f;
 constexpr float kRemoteDefault = 0.15f;
 
 void SmoothingStaysInsideZeroToOne() {
-    using acr_ht::SanitizeSmoothing;
+    using acr_ht::legacy::SanitizeSmoothing;
     // Non-finite values are replaced by the fallback before the clamp is
     // reached, so an infinity lands on the default rather than on a bound - and
     // the default is the one belonging to the key that was read. Answering a
@@ -64,8 +64,8 @@ void SmoothingStaysInsideZeroToOne() {
 }
 
 void SensitivityKeepsItsSignButNotItsInfinities() {
-    using acr_ht::SanitizeSensitivity;
-    using acr_ht::kMaxSensitivity;
+    using acr_ht::legacy::SanitizeSensitivity;
+    using acr_ht::legacy::kMaxSensitivity;
     // Non-finite values fall back before the clamp, so an infinity lands on
     // 1.0 rather than on the bound.
     Check(g_failures, SanitizeSensitivity(kNan) == 1.0f, "sensitivity NaN falls back to 1");
@@ -84,8 +84,8 @@ void SensitivityKeepsItsSignButNotItsInfinities() {
 }
 
 void PositionLimitsCannotInvertTheClamp() {
-    using acr_ht::SanitizePositionLimit;
-    using acr_ht::kMaxPositionLimit;
+    using acr_ht::legacy::SanitizePositionLimit;
+    using acr_ht::legacy::kMaxPositionLimit;
     Check(g_failures, SanitizePositionLimit(kNan, 0.2f) == 0.2f,
           "a non-finite position limit falls back");
     // PositionProcessor clamps to [-limit, +limit]; a negative limit swaps the
@@ -99,7 +99,7 @@ void PositionLimitsCannotInvertTheClamp() {
 }
 
 void NearClipIsEitherLeaveAloneOrAUsableDistance() {
-    using acr_ht::SanitizeNearClip;
+    using acr_ht::legacy::SanitizeNearClip;
     Check(g_failures, SanitizeNearClip(kNan) == 0.0f, "near clip NaN means leave the game's value");
     Check(g_failures, SanitizeNearClip(-1.0f) == 0.0f, "a negative near clip means leave it alone");
     Check(g_failures, SanitizeNearClip(0.0f) == 0.0f, "zero passes through as leave-alone");
@@ -110,7 +110,7 @@ void NearClipIsEitherLeaveAloneOrAUsableDistance() {
 }
 
 void HotkeyCodesThatCannotFireAreRefused() {
-    using acr_ht::IsBindableVirtualKey;
+    using acr_ht::legacy::IsBindableVirtualKey;
     Check(g_failures, !IsBindableVirtualKey(0), "0 is not a key");
     Check(g_failures, !IsBindableVirtualKey(0xFF), "0xFF is not a key");
     Check(g_failures, !IsBindableVirtualKey(-1), "a negative code is not a key");

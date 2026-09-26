@@ -52,6 +52,7 @@ add_library(acr_ht_core STATIC
     src/clean_pose_cache.cpp
     src/config.cpp
     src/exe_paths.cpp
+    src/legacy_config/legacy_config.cpp
 )
 
 target_include_directories(acr_ht_core PUBLIC

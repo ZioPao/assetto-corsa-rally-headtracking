@@ -3,8 +3,6 @@
 #include <cstdint>
 #include <string>
 
-#include "cameraunlock/math/smoothing_utils.h"
-
 namespace acr_ht {
 
 struct Config {
@@ -33,8 +31,8 @@ struct Config {
     // machine is already steady, so local_smoothing is 0.0 and nothing floors
     // it; a phone on WiFi jitters over the network, which is what
     // remote_smoothing is for.
-    float local_smoothing = static_cast<float>(cameraunlock::math::kDefaultLocalSmoothing);
-    float remote_smoothing = static_cast<float>(cameraunlock::math::kDefaultRemoteSmoothing);
+    float local_smoothing = 0.0f;
+    float remote_smoothing = 0.15f;
 
     // Near clip plane, in centimetres, used while head tracking is driving the
     // view. The game ships 5 cm, which is further from the eye than the
@@ -68,6 +66,12 @@ struct Config {
     float limit_z = 0.20f;
     float limit_z_back = 0.0f;
 };
+
+// Reads HeadTracking.ini from `exe_dir` over `out`. Keys that are absent, or
+// whose value the boundary checks in config_sanitize.h reject, leave the
+// corresponding member of `out` at whatever it already held - so passing a
+// default-constructed Config yields the shipped defaults.
+void LoadConfig(const std::string& exe_dir, Config& out);
 
 // Writes the documented default HeadTracking.ini into `exe_dir`, unless one is
 // already there. Never overwrites a user's file.

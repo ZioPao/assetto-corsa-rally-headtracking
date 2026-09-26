@@ -1,6 +1,7 @@
-// The config_defaults round trip: generate the shipped HeadTracking.ini, load
-// it back over a Config whose every member has been poisoned, and require the
-// result to be the shipped defaults.
+// The frozen HeadTracking.ini reader in src/legacy_config/, and the round
+// trip: generate the shipped HeadTracking.ini, read it back over a Config
+// whose every member has been poisoned, and require the result to be the
+// shipped defaults.
 //
 // That is what keeps kDefaultIniText and the Config member initialisers in
 // step. They are two independent copies of the same numbers, and a default
@@ -8,7 +9,8 @@
 // fresh install and another way for anyone whose INI predates the change.
 
 #include "config.h"
-#include "config_sanitize.h"
+#include "legacy_config/config_sanitize.h"
+#include "legacy_config/legacy_config.h"
 #include "test_support.h"
 
 #include <windows.h>
@@ -19,7 +21,7 @@
 
 namespace {
 
-using acr_ht::Config;
+using acr_ht::legacy::Config;
 using acr_ht_tests::Check;
 using acr_ht_tests::Near;
 
@@ -196,8 +198,8 @@ void GeneratedIniLoadsBackAsTheShippedDefaults() {
     acr_ht::WriteDefaultConfigIfMissing(dir.Path());
 
     Config loaded = Poisoned();
-    acr_ht::LoadConfig(dir.Path(), loaded);
-    CheckMatchesDefaults(loaded, "the generated INI loads back as the shipped defaults");
+    acr_ht::legacy::Load(dir.IniPath(), loaded);
+    CheckMatchesDefaults(loaded, "the generated INI reads back as the shipped defaults");
 }
 
 void AnExistingConfigIsNeverOverwritten() {
@@ -216,7 +218,7 @@ void AnExistingConfigIsNeverOverwritten() {
           "an existing config is left exactly as the user wrote it");
 
     Config loaded;
-    acr_ht::LoadConfig(dir.Path(), loaded);
+    acr_ht::legacy::Load(dir.IniPath(), loaded);
     Check(g_failures, loaded.udp_port == 5000, "an existing config is not overwritten");
 }
 
@@ -225,7 +227,7 @@ void AMissingConfigLeavesTheCallersValuesAlone() {
     dir.RemoveIni();
 
     Config loaded = Poisoned();
-    acr_ht::LoadConfig(dir.Path(), loaded);
+    acr_ht::legacy::Load(dir.IniPath(), loaded);
     Check(g_failures,
           loaded.udp_port == 5555 && Near(loaded.local_smoothing, 0.7f, 1e-6),
           "a missing config leaves the caller's values untouched");
@@ -258,7 +260,7 @@ void OutOfRangeValuesFallBackRatherThanReachingTheEngine() {
     loaded.yaw_sensitivity = 2.75f;
     loaded.near_clip_cm = 3.5f;
     loaded.limit_z = 0.33f;
-    acr_ht::LoadConfig(dir.Path(), loaded);
+    acr_ht::legacy::Load(dir.IniPath(), loaded);
 
     Check(g_failures, loaded.udp_port == 5555, "an out-of-range port keeps the caller's value");
     // Each key falls back to ITS OWN shipped default, not to a single shared
@@ -270,7 +272,7 @@ void OutOfRangeValuesFallBackRatherThanReachingTheEngine() {
           "a NaN LocalSmoothing falls back to the local default 0.0");
     Check(g_failures, Near(loaded.remote_smoothing, 0.15f, 1e-6),
           "a NaN RemoteSmoothing falls back to the remote default 0.15, not to 0.0");
-    Check(g_failures, Near(loaded.yaw_sensitivity, acr_ht::kMaxSensitivity, 1e-6),
+    Check(g_failures, Near(loaded.yaw_sensitivity, acr_ht::legacy::kMaxSensitivity, 1e-6),
           "an absurd finite sensitivity is clamped to the bound");
     // 1e40 overflows a float to +inf, which is not finite, so it takes the
     // fallback rather than the clamp.
@@ -278,7 +280,7 @@ void OutOfRangeValuesFallBackRatherThanReachingTheEngine() {
           "an overflowing sensitivity falls back to 1.0 rather than reaching the engine as Inf");
     Check(g_failures, Near(loaded.near_clip_cm, 0.0f, 1e-6),
           "a negative near clip turns the adjustment off");
-    Check(g_failures, Near(loaded.limit_z, acr_ht::kMaxPositionLimit, 1e-6),
+    Check(g_failures, Near(loaded.limit_z, acr_ht::legacy::kMaxPositionLimit, 1e-6),
           "an absurd travel limit is clamped");
     Check(g_failures, Near(loaded.limit_z_back, 0.0f, 1e-6),
           "a negative travel limit becomes no travel");
@@ -293,7 +295,7 @@ void WithIni(const char* ini, Seed seed, Verify check) {
 
     Config loaded;
     seed(loaded);
-    acr_ht::LoadConfig(dir.Path(), loaded);
+    acr_ht::legacy::Load(dir.IniPath(), loaded);
     check(loaded);
 }
 
@@ -507,8 +509,8 @@ void HotkeysAreRemappable() {
 
 }  // namespace
 
-int RunConfigTests() {
-    std::cout << "\nConfig defaults\n";
+int RunLegacyReaderTests() {
+    std::cout << "\nFrozen HeadTracking.ini reader\n";
     g_failures = 0;
     GeneratedIniLoadsBackAsTheShippedDefaults();
     AnExistingConfigIsNeverOverwritten();

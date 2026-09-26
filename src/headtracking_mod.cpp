@@ -11,6 +11,7 @@
 #include "camera_hook.h"
 #include "config.h"
 #include "exe_paths.h"
+#include "legacy_config/legacy_config.h"
 #include "logging.h"
 #include "ue/ue_globals.h"
 #include "ue/ue_probe.h"
@@ -205,6 +206,37 @@ std::uintptr_t WaitFor(Fn&& probe) {
     return 0;
 }
 
+Config FromLegacy(const legacy::Config& read) {
+    Config c;
+    c.udp_port = read.udp_port;
+    c.enable_on_startup = read.enable_on_startup;
+    c.toggle_key = read.toggle_key;
+    c.cycle_mode_key = read.cycle_mode_key;
+    c.chord_toggle_key = read.chord_toggle_key;
+    c.chord_cycle_mode_key = read.chord_cycle_mode_key;
+    c.yaw_sensitivity = read.yaw_sensitivity;
+    c.pitch_sensitivity = read.pitch_sensitivity;
+    c.roll_sensitivity = read.roll_sensitivity;
+    c.invert_yaw = read.invert_yaw;
+    c.invert_pitch = read.invert_pitch;
+    c.invert_roll = read.invert_roll;
+    c.local_smoothing = read.local_smoothing;
+    c.remote_smoothing = read.remote_smoothing;
+    c.near_clip_cm = read.near_clip_cm;
+    c.position_enabled = read.position_enabled;
+    c.position_sensitivity_x = read.position_sensitivity_x;
+    c.position_sensitivity_y = read.position_sensitivity_y;
+    c.position_sensitivity_z = read.position_sensitivity_z;
+    c.invert_position_x = read.invert_position_x;
+    c.invert_position_y = read.invert_position_y;
+    c.invert_position_z = read.invert_position_z;
+    c.limit_x = read.limit_x;
+    c.limit_y = read.limit_y;
+    c.limit_z = read.limit_z;
+    c.limit_z_back = read.limit_z_back;
+    return c;
+}
+
 // `exeDir` is the ANSI form of the game directory, and is empty when the
 // directory has no ANSI form at all. The INI layer is ANSI-only, so there is
 // nothing to read or write in that case - but everything else still works, so
@@ -216,7 +248,9 @@ void LoadAndApplyConfig(const std::string& exeDir) {
                   "defaults are in use.");
     } else {
         WriteDefaultConfigIfMissing(exeDir);
-        LoadConfig(exeDir, g_config);
+        legacy::Config read;
+        legacy::Load(exeDir + "\\HeadTracking.ini", read);
+        g_config = FromLegacy(read);
     }
     Log::Line("[boot] config: port=%u enableOnStartup=%d localSmoothing=%.2f "
               "remoteSmoothing=%.2f position=%d",
