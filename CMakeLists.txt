@@ -43,9 +43,9 @@ set(CAMERAUNLOCK_BUILD_HOOKS ON CACHE BOOL "" FORCE)
 set(CAMERAUNLOCK_BUILD_UNREAL ON CACHE BOOL "" FORCE)
 add_subdirectory(cameraunlock-core/cpp ${CMAKE_BINARY_DIR}/cameraunlock-core)
 
-# The parts of the mod that need no game process: the config boundary, the
-# executable-path handling, the camera composition and the detour's clean-pose
-# table. Split out so the tests can link them without pulling in DllMain,
+# The parts of the mod that need no game process: the config boundary, what the
+# session starts with, the executable-path handling, the camera composition and
+# the detour's clean-pose table. Split out so the tests can link them without pulling in DllMain,
 # MinHook or the UE reflection walk.
 add_library(acr_ht_core STATIC
     src/camera_transform.cpp
@@ -53,6 +53,7 @@ add_library(acr_ht_core STATIC
     src/config.cpp
     src/exe_paths.cpp
     src/legacy_config/legacy_config.cpp
+    src/startup.cpp
 )
 
 target_include_directories(acr_ht_core PUBLIC

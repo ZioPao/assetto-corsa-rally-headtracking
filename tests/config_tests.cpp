@@ -2,12 +2,14 @@
 // (config/CameraUnlock.ini) is the table's fresh render, a first launch creates
 // exactly those bytes, the mode cycle's save changes the lines of its own rows
 // and no other byte, End's row is not saved, a row holding default follows
-// Defaults.ini, and [Camera] NearClipCm takes 0 or 0.1 to 100.
+// Defaults.ini, [Camera] NearClipCm takes 0 or 0.1 to 100, and each position
+// limit reaches the session's bound of the same name.
 //
 // acr_ht_config_tests --render-config <path> writes the rendered file to <path>
 // instead (pixi run render-config).
 
 #include "config.h"
+#include "startup.h"
 
 #include <windows.h>
 
@@ -187,6 +189,24 @@ void NearClipTakesZeroOrPointOneToHundred() {
     Check(!read("-1", v) && v == 1.0f, "NearClipCm=-1 keeps the default with a diagnostic");
 }
 
+// Every migrated file holds LimitY in both vertical rows, so the differential
+// test cannot tell them apart. A player who sets them apart can.
+void EachLimitReachesItsOwnBound() {
+    Config c = config::Table().defaults();
+    c.position_limit_x = 0.11f;
+    c.position_limit_y = 0.12f;
+    c.position_limit_y_down = 0.13f;
+    c.position_limit_z = 0.14f;
+    c.position_limit_z_back = 0.15f;
+    cameraunlock::UdpReceiver receiver;
+    acr_ht::Session session(receiver);
+    acr_ht::ApplyConfigToPipeline(c, session);
+    const cameraunlock::PositionSettings& p = session.GetPositionSettings();
+    Check(p.limit_x == 0.11f && p.limit_y == 0.12f && p.limit_y_down == 0.13f && p.limit_z == 0.14f &&
+              p.limit_z_back == 0.15f,
+          "each position limit reaches the session's bound of the same name");
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -206,6 +226,7 @@ int main(int argc, char** argv) {
     SavesChangeOnlyTheirRows(dir);
     DefaultRowsFollowDefaultsIni(dir);
     NearClipTakesZeroOrPointOneToHundred();
+    EachLimitReachesItsOwnBound();
     fs::remove_all(dir);
     if (g_failures != 0) {
         std::printf("%d check(s) failed\n", g_failures);

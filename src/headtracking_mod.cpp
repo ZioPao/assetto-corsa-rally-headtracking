@@ -5,30 +5,25 @@
 
 #include <atomic>
 #include <cstdio>
-#include <stdexcept>
 #include <string>
 #include <thread>
-#include <utility>
 
 #include "camera_hook.h"
 #include "config.h"
 #include "exe_paths.h"
 #include "logging.h"
+#include "startup.h"
 #include "ue/ue_globals.h"
 #include "ue/ue_probe.h"
 
 #include <cameraunlock/config/defaults_file.h>
 #include <cameraunlock/input/hotkey_poller.h>
 #include <cameraunlock/input/key_binding_registration.h>
-#include <cameraunlock/input/key_bindings.h>
 #include <cameraunlock/math/smoothing_utils.h>
-#include <cameraunlock/protocol/udp_receiver.h>
-#include <cameraunlock/tracking/head_tracking_session.h>
 
 namespace acr_ht {
 namespace {
 
-using Session = cameraunlock::HeadTrackingSession<cameraunlock::UdpReceiver>;
 // Without IsRemoteConnection() on the receiver the session silently falls back
 // to LocalSmoothing forever, with nothing at the call site to show it.
 static_assert(Session::kHasRemoteConnection,
@@ -56,29 +51,6 @@ std::atomic<bool> g_bootstrapRunning{false};
 // user the whole session.
 constexpr int   kDiscoveryAttempts = 1200;
 constexpr DWORD kDiscoveryIntervalMs = 500;
-
-void ApplyConfigToPipeline(const Config& config, Session& session) {
-    // The pose is applied as the tracker sends it: no sensitivity and no axis
-    // inversion of the mod's own, which the processors' defaults already are.
-    cameraunlock::PositionSettings position;
-    position.limit_x = config.position_limit_x;
-    position.limit_y = config.position_limit_y;
-    position.limit_y_down = config.position_limit_y_down;
-    position.limit_z = config.position_limit_z;
-    position.limit_z_back = config.position_limit_z_back;
-    position.local_smoothing = config.local_smoothing;
-    position.remote_smoothing = config.remote_smoothing;
-    session.GetPositionProcessor().SetSettings(position);
-
-    // One pair of values for rotation and position alike, applied after the
-    // position settings so a settings rebuild cannot drop them. The session
-    // picks between the two per connection from the receiver's source-address
-    // check, so nothing here decides which one is in effect.
-    session.SetLocalSmoothing(config.local_smoothing);
-    session.SetRemoteSmoothing(config.remote_smoothing);
-
-    session.SetMode(config::StartupTrackingMode(config));
-}
 
 // The last connection locality the log reported. Only the camera thread touches
 // these, and only through LogConnectionLocality below.
@@ -123,19 +95,14 @@ void CycleTrackingMode() {
     config::SaveTrackingMode(mode);
 }
 
-// Each action fires from every key its list in CameraUnlock.ini names. The
-// table only accepts a list ParseKeyBindings reads.
 void RegisterHotkeys(const Config& config) {
-    using namespace cameraunlock::input;
-
-    const std::pair<const std::string*, void (*)()> actions[] = {
-        {&config.toggle_key, ToggleTracking},
-        {&config.cycle_tracking_mode_key, CycleTrackingMode},
-    };
-    for (const auto& [list, action] : actions) {
-        const KeyBindingsParseResult parsed = ParseKeyBindings(*list);
-        if (!parsed.ok()) throw std::logic_error("the config table accepted the hotkey list '" + *list + "': " + parsed.error);
-        RegisterKeyBindings(g_hotkeys, parsed.bindings, action);
+    for (const HotkeyList& list : HotkeyLists(config)) {
+        void (*action)() = nullptr;
+        switch (list.action) {
+            case HotkeyAction::ToggleTracking:    action = ToggleTracking; break;
+            case HotkeyAction::CycleTrackingMode: action = CycleTrackingMode; break;
+        }
+        cameraunlock::input::RegisterKeyBindings(g_hotkeys, list.bindings, action);
     }
 
     g_hotkeys.Start();

@@ -7,8 +7,15 @@
 //              startup code
 //   Migration  the config owner's Load in a folder holding only the input as
 //              HeadTracking.ini, which imports it through config::Import into
-//              a new CameraUnlock.ini, then this build's startup code on what
-//              the session runs on
+//              a new CameraUnlock.ini, then this build's startup code
+//              (src/startup.cpp, which the mod calls) on what the session runs
+//              on
+//
+// v1.1.0's startup code is restated in ObservePublished rather than run: it
+// lived in headtracking_mod.cpp beside the game hooks and the bootstrap
+// thread, which cannot link outside the game process. The restatement matches
+// `git show v1.1.0:src/headtracking_mod.cpp`, ApplyConfigToPipeline and
+// RegisterHotkeys.
 //
 // Comparison 1, oracle against import, is what a player sees change that the
 // conversion did not cause: commits since v1.1.0 that change how the file is
@@ -68,6 +75,7 @@
 #include "config.h"
 #include "legacy_config/legacy_config.h"
 #include "oracle_adapter.h"
+#include "startup.h"
 
 #include "cameraunlock/config/canonical_ini.h"
 #include "cameraunlock/config/config_owner.h"
@@ -211,9 +219,8 @@ std::string BindingsText(std::vector<Binding> bindings) {
 }
 
 // A published Config (v1.1.0's, or the frozen reader's copy of it) through
-// v1.1.0's startup code in src/headtracking_mod.cpp: ApplyConfigToPipeline
-// hands the sensitivities and inversions to the processors and builds the
-// position settings with PositionSettings::Symmetric, which puts LimitY on both
+// v1.1.0's startup code, restated: its ApplyConfigToPipeline hands the
+// sensitivities and inversions to the processors and builds the position settings with PositionSettings::Symmetric, which puts LimitY on both
 // vertical bounds; the mode starts as rotation and position, or rotation only
 // when [Position] Enabled is false; tracking starts as EnableOnStartup says;
 // and RegisterHotkeys binds each action's nav key with NavGuarded, which does
@@ -250,56 +257,58 @@ Record ObservePublished(const C& c) {
     return r;
 }
 
-const char* ModeName(bool rotation, bool position) {
-    if (rotation && position) return "RotationAndPosition";
-    if (rotation) return "RotationOnly";
-    if (position) return "PositionOnly";
-    return "none";
+const char* ModeName(cameraunlock::TrackingMode mode) {
+    switch (mode) {
+        case cameraunlock::TrackingMode::RotationAndPosition: return "RotationAndPosition";
+        case cameraunlock::TrackingMode::RotationOnly:        return "RotationOnly";
+        case cameraunlock::TrackingMode::PositionOnly:        return "PositionOnly";
+    }
+    throw std::logic_error("a tracking mode outside the three");
 }
 
-// The settings a session runs on through this build's startup code
-// (ApplyConfigToPipeline and RegisterHotkeys in src/headtracking_mod.cpp): no
-// rotation or position sensitivity or inversion, the limits and the smoothing
-// pair from the file, the mode from the pair, and each hotkey list through
-// ParseKeyBindings and RegisterKeyBindings, whose binding without modifiers
-// does not fire while Ctrl and Shift are both held, as NavGuarded did, and
-// whose Ctrl+Shift binding fires only while they are, as ChordGuarded did.
+// The state a session starts in from this build's startup code: the session
+// the mod builds, set up by the ApplyConfigToPipeline the mod calls, and the
+// hotkey lists its RegisterHotkeys registers. A binding without modifiers does
+// not fire while Ctrl and Shift are both held, as NavGuarded did, and a
+// Ctrl+Shift binding fires only while they are, as ChordGuarded did.
 Record ObserveCanonical(const Config& c) {
+    cameraunlock::UdpReceiver receiver;
+    acr_ht::Session session(receiver);
+    acr_ht::ApplyConfigToPipeline(c, session);
+    const cameraunlock::SensitivitySettings& rot = session.GetProcessor().GetSensitivity();
+    const cameraunlock::PositionSettings& pos = session.GetPositionSettings();
+
     Record r;
     r["field.udp_port"] = std::to_string(c.udp_port);
-    r["field.rot.yaw_sensitivity"] = Bits(1.0f);
-    r["field.rot.pitch_sensitivity"] = Bits(1.0f);
-    r["field.rot.roll_sensitivity"] = Bits(1.0f);
-    r["field.rot.invert_yaw"] = Flag(false);
-    r["field.rot.invert_pitch"] = Flag(false);
-    r["field.rot.invert_roll"] = Flag(false);
-    r["field.local_smoothing"] = Bits(c.local_smoothing);
-    r["field.remote_smoothing"] = Bits(c.remote_smoothing);
+    r["field.rot.yaw_sensitivity"] = Bits(rot.yaw);
+    r["field.rot.pitch_sensitivity"] = Bits(rot.pitch);
+    r["field.rot.roll_sensitivity"] = Bits(rot.roll);
+    r["field.rot.invert_yaw"] = Flag(rot.invert_yaw);
+    r["field.rot.invert_pitch"] = Flag(rot.invert_pitch);
+    r["field.rot.invert_roll"] = Flag(rot.invert_roll);
+    r["field.local_smoothing"] = Bits(session.GetLocalSmoothing());
+    r["field.remote_smoothing"] = Bits(session.GetRemoteSmoothing());
     r["field.near_clip_cm"] = Bits(c.near_clip_cm);
-    r["field.pos.sensitivity_x"] = Bits(1.0f);
-    r["field.pos.sensitivity_y"] = Bits(1.0f);
-    r["field.pos.sensitivity_z"] = Bits(1.0f);
-    r["field.pos.invert_x"] = Flag(false);
-    r["field.pos.invert_y"] = Flag(false);
-    r["field.pos.invert_z"] = Flag(false);
-    r["field.pos.limit_x"] = Bits(c.position_limit_x);
-    r["field.pos.limit_y"] = Bits(c.position_limit_y);
-    r["field.pos.limit_y_down"] = Bits(c.position_limit_y_down);
-    r["field.pos.limit_z"] = Bits(c.position_limit_z);
-    r["field.pos.limit_z_back"] = Bits(c.position_limit_z_back);
-    const cameraunlock::TrackingModeChannels channels =
-        cameraunlock::EncodeTrackingMode(config::StartupTrackingMode(c));
+    r["field.pos.sensitivity_x"] = Bits(pos.sensitivity_x);
+    r["field.pos.sensitivity_y"] = Bits(pos.sensitivity_y);
+    r["field.pos.sensitivity_z"] = Bits(pos.sensitivity_z);
+    r["field.pos.invert_x"] = Flag(pos.invert_x);
+    r["field.pos.invert_y"] = Flag(pos.invert_y);
+    r["field.pos.invert_z"] = Flag(pos.invert_z);
+    r["field.pos.limit_x"] = Bits(pos.limit_x);
+    r["field.pos.limit_y"] = Bits(pos.limit_y);
+    r["field.pos.limit_y_down"] = Bits(pos.limit_y_down);
+    r["field.pos.limit_z"] = Bits(pos.limit_z);
+    r["field.pos.limit_z_back"] = Bits(pos.limit_z_back);
     r["start.enabled"] = Flag(c.enable_on_startup);
-    r["start.mode"] = ModeName(channels.rotation_enabled, channels.position_enabled);
-    const std::pair<const char*, const std::string*> lists[] = {{"hotkey.Toggle", &c.toggle_key},
-                                                                {"hotkey.CycleTrackingMode", &c.cycle_tracking_mode_key}};
-    for (const auto& [name, list] : lists) {
-        const cameraunlock::input::KeyBindingsParseResult parsed = cameraunlock::input::ParseKeyBindings(*list);
-        Check(parsed.ok(), "the hotkey list '" + *list + "' parses");
+    r["start.mode"] = ModeName(session.GetMode());
+    for (const acr_ht::HotkeyList& list : acr_ht::HotkeyLists(c)) {
         std::vector<Binding> bindings;
-        for (const cameraunlock::input::KeyBinding& b : parsed.bindings) {
+        for (const cameraunlock::input::KeyBinding& b : list.bindings) {
             bindings.push_back({static_cast<unsigned>(b.modifiers), b.vk});
         }
+        const char* name = list.action == acr_ht::HotkeyAction::ToggleTracking ? "hotkey.Toggle" : "hotkey.CycleTrackingMode";
+        Check(r.find(name) == r.end(), std::string(name) + " is registered from one list");
         r[name] = BindingsText(bindings);
     }
     return r;
