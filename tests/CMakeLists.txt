@@ -12,15 +12,26 @@ add_executable(acr_ht_tests
 )
 
 target_compile_options(acr_ht_tests PRIVATE ${ACR_HT_STRICT_WARNINGS})
+target_compile_definitions(acr_ht_tests PRIVATE ACR_HT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(acr_ht_tests PRIVATE acr_ht_core)
 
 add_test(NAME acr_ht_tests COMMAND acr_ht_tests)
 
-# The config differential test. The oracle is v1.1.0's reader, the newest
-# published build, compiled from byte copies in config_differential/oracle with
-# the cameraunlock-core sources it included at v1.1.0's core pin, its `acr_ht`
-# and `cameraunlock` namespaces renamed so it links beside this build's.
+# The committed config against the table's fresh render, and the saves.
+# `acr_ht_config_tests --render-config <path>` is pixi run render-config.
+add_executable(acr_ht_config_tests config_tests.cpp)
+target_compile_options(acr_ht_config_tests PRIVATE ${ACR_HT_STRICT_WARNINGS} /EHsc)
+target_compile_definitions(acr_ht_config_tests PRIVATE ACR_HT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+target_link_libraries(acr_ht_config_tests PRIVATE acr_ht_core)
+add_test(NAME acr_ht_config_tests COMMAND acr_ht_config_tests)
+
+# The config differential test: v1.1.0's reader, the newest published build,
+# against the frozen reader in src/legacy_config/, and that against the config
+# owner's migration into CameraUnlock.ini. The oracle is compiled from byte
+# copies in config_differential/oracle with the cameraunlock-core sources it
+# included at v1.1.0's core pin, its `acr_ht` and `cameraunlock` namespaces
+# renamed so it links beside this build's.
 set(ACR_HT_DIFFERENTIAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/config_differential)
 set(ACR_HT_ORACLE_DIR ${ACR_HT_DIFFERENTIAL_DIR}/oracle)
 add_library(acr_ht_config_oracle STATIC

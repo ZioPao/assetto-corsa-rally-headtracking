@@ -5,19 +5,22 @@
 
 #include <atomic>
 #include <cstdio>
+#include <stdexcept>
 #include <string>
 #include <thread>
+#include <utility>
 
 #include "camera_hook.h"
 #include "config.h"
 #include "exe_paths.h"
-#include "legacy_config/legacy_config.h"
 #include "logging.h"
 #include "ue/ue_globals.h"
 #include "ue/ue_probe.h"
 
-#include <cameraunlock/input/chord_hotkeys.h>
+#include <cameraunlock/config/defaults_file.h>
 #include <cameraunlock/input/hotkey_poller.h>
+#include <cameraunlock/input/key_binding_registration.h>
+#include <cameraunlock/input/key_bindings.h>
 #include <cameraunlock/math/smoothing_utils.h>
 #include <cameraunlock/protocol/udp_receiver.h>
 #include <cameraunlock/tracking/head_tracking_session.h>
@@ -55,24 +58,16 @@ constexpr int   kDiscoveryAttempts = 1200;
 constexpr DWORD kDiscoveryIntervalMs = 500;
 
 void ApplyConfigToPipeline(const Config& config, Session& session) {
-    cameraunlock::SensitivitySettings sensitivity;
-    sensitivity.yaw = config.yaw_sensitivity;
-    sensitivity.pitch = config.pitch_sensitivity;
-    sensitivity.roll = config.roll_sensitivity;
-    sensitivity.invert_yaw = config.invert_yaw;
-    sensitivity.invert_pitch = config.invert_pitch;
-    sensitivity.invert_roll = config.invert_roll;
-
-    auto& proc = session.GetProcessor();
-    proc.SetSensitivity(sensitivity);
-
-    cameraunlock::PositionSettings position = cameraunlock::PositionSettings::Symmetric(
-        config.position_sensitivity_x,
-        config.position_sensitivity_y,
-        config.position_sensitivity_z,
-        config.limit_x, config.limit_y, config.limit_z, config.limit_z_back,
-        config.local_smoothing, config.remote_smoothing,
-        config.invert_position_x, config.invert_position_y, config.invert_position_z);
+    // The pose is applied as the tracker sends it: no sensitivity and no axis
+    // inversion of the mod's own, which the processors' defaults already are.
+    cameraunlock::PositionSettings position;
+    position.limit_x = config.position_limit_x;
+    position.limit_y = config.position_limit_y;
+    position.limit_y_down = config.position_limit_y_down;
+    position.limit_z = config.position_limit_z;
+    position.limit_z_back = config.position_limit_z_back;
+    position.local_smoothing = config.local_smoothing;
+    position.remote_smoothing = config.remote_smoothing;
     session.GetPositionProcessor().SetSettings(position);
 
     // One pair of values for rotation and position alike, applied after the
@@ -82,8 +77,7 @@ void ApplyConfigToPipeline(const Config& config, Session& session) {
     session.SetLocalSmoothing(config.local_smoothing);
     session.SetRemoteSmoothing(config.remote_smoothing);
 
-    session.SetMode(config.position_enabled ? cameraunlock::TrackingMode::RotationAndPosition
-                                            : cameraunlock::TrackingMode::RotationOnly);
+    session.SetMode(config::StartupTrackingMode(config));
 }
 
 // The last connection locality the log reported. Only the camera thread touches
@@ -115,69 +109,33 @@ void ToggleTracking() {
     Log::Line("[input] tracking %s", on ? "enabled" : "disabled");
 }
 
+// Applies the next mode, then saves it, so the choice survives a restart.
+// Runs on the hotkey poller's thread.
 void CycleTrackingMode() {
+    const cameraunlock::TrackingMode mode = g_session.CycleMode();
     const char* name = "";
-    switch (g_session.CycleMode()) {
+    switch (mode) {
         case cameraunlock::TrackingMode::RotationAndPosition: name = "rotation and position"; break;
         case cameraunlock::TrackingMode::RotationOnly:        name = "rotation only"; break;
         case cameraunlock::TrackingMode::PositionOnly:        name = "position only"; break;
     }
     Log::Line("[input] tracking mode: %s", name);
+    config::SaveTrackingMode(mode);
 }
 
-// Every action is reachable two ways: its nav-cluster key, and the
-// Ctrl+Shift+<letter> chord for keyboards without a nav cluster. Pairing them
-// in one row is what keeps the two lists from drifting apart - a new action
-// cannot pick up a nav key and silently miss its chord.
-struct HotkeyBinding {
-    int nav_key;
-    int chord_key;
-    void (*action)();
-};
-
-// GetKeyNameText wants the scan code in bits 16-23 and the extended-key flag in
-// bit 24. The nav cluster, the arrows and a few others are extended keys, and
-// without that bit they name their numpad twins - a toggle left on End would
-// report itself in the log as "Num 1", which is the one thing this line exists
-// to get right once the key is the user's choice.
-bool IsExtendedKey(int vk) {
-    switch (vk) {
-        case VK_PRIOR: case VK_NEXT: case VK_END: case VK_HOME:
-        case VK_LEFT: case VK_UP: case VK_RIGHT: case VK_DOWN:
-        case VK_INSERT: case VK_DELETE:
-        case VK_DIVIDE: case VK_NUMLOCK: case VK_SNAPSHOT:
-            return true;
-        default:
-            return false;
-    }
-}
-
-std::string HotkeyName(int vk) {
-    const UINT scan = MapVirtualKeyW(static_cast<UINT>(vk), MAPVK_VK_TO_VSC);
-    if (scan) {
-        LONG lparam = static_cast<LONG>(scan) << 16;
-        if (IsExtendedKey(vk)) lparam |= 1L << 24;
-        char name[64]{};
-        if (GetKeyNameTextA(lparam, name, sizeof(name)) > 0) return name;
-    }
-    // A key this layout has no name for still has to be identifiable, and the
-    // code is what the user typed into the INI.
-    char code[8]{};
-    std::snprintf(code, sizeof(code), "0x%02X", vk);
-    return code;
-}
-
+// Each action fires from every key its list in CameraUnlock.ini names. The
+// table only accepts a list ParseKeyBindings reads.
 void RegisterHotkeys(const Config& config) {
     using namespace cameraunlock::input;
 
-    const HotkeyBinding bindings[] = {
-        { config.toggle_key,     config.chord_toggle_key,     ToggleTracking },
-        { config.cycle_mode_key, config.chord_cycle_mode_key, CycleTrackingMode },
+    const std::pair<const std::string*, void (*)()> actions[] = {
+        {&config.toggle_key, ToggleTracking},
+        {&config.cycle_tracking_mode_key, CycleTrackingMode},
     };
-
-    for (const HotkeyBinding& binding : bindings) {
-        g_hotkeys.AddHotkey(binding.nav_key, NavGuarded(binding.action));
-        g_hotkeys.AddHotkey(binding.chord_key, ChordGuarded(binding.action));
+    for (const auto& [list, action] : actions) {
+        const KeyBindingsParseResult parsed = ParseKeyBindings(*list);
+        if (!parsed.ok()) throw std::logic_error("the config table accepted the hotkey list '" + *list + "': " + parsed.error);
+        RegisterKeyBindings(g_hotkeys, parsed.bindings, action);
     }
 
     g_hotkeys.Start();
@@ -206,57 +164,13 @@ std::uintptr_t WaitFor(Fn&& probe) {
     return 0;
 }
 
-Config FromLegacy(const legacy::Config& read) {
-    Config c;
-    c.udp_port = read.udp_port;
-    c.enable_on_startup = read.enable_on_startup;
-    c.toggle_key = read.toggle_key;
-    c.cycle_mode_key = read.cycle_mode_key;
-    c.chord_toggle_key = read.chord_toggle_key;
-    c.chord_cycle_mode_key = read.chord_cycle_mode_key;
-    c.yaw_sensitivity = read.yaw_sensitivity;
-    c.pitch_sensitivity = read.pitch_sensitivity;
-    c.roll_sensitivity = read.roll_sensitivity;
-    c.invert_yaw = read.invert_yaw;
-    c.invert_pitch = read.invert_pitch;
-    c.invert_roll = read.invert_roll;
-    c.local_smoothing = read.local_smoothing;
-    c.remote_smoothing = read.remote_smoothing;
-    c.near_clip_cm = read.near_clip_cm;
-    c.position_enabled = read.position_enabled;
-    c.position_sensitivity_x = read.position_sensitivity_x;
-    c.position_sensitivity_y = read.position_sensitivity_y;
-    c.position_sensitivity_z = read.position_sensitivity_z;
-    c.invert_position_x = read.invert_position_x;
-    c.invert_position_y = read.invert_position_y;
-    c.invert_position_z = read.invert_position_z;
-    c.limit_x = read.limit_x;
-    c.limit_y = read.limit_y;
-    c.limit_z = read.limit_z;
-    c.limit_z_back = read.limit_z_back;
-    return c;
-}
-
-// `exeDir` is the ANSI form of the game directory, and is empty when the
-// directory has no ANSI form at all. The INI layer is ANSI-only, so there is
-// nothing to read or write in that case - but everything else still works, so
-// the mod comes up on its built-in defaults rather than going dormant.
-void LoadAndApplyConfig(const std::string& exeDir) {
-    if (exeDir.empty()) {
-        Log::Line("[config] the game directory has no ANSI form on this system's code page, "
-                  "so HeadTracking.ini cannot be read or written beside the game. Built-in "
-                  "defaults are in use.");
-    } else {
-        WriteDefaultConfigIfMissing(exeDir);
-        legacy::Config read;
-        legacy::Load(exeDir + "\\HeadTracking.ini", read);
-        g_config = FromLegacy(read);
-    }
+void LoadAndApplyConfig(const std::wstring& exeDir) {
+    g_config = config::Load(exeDir, cameraunlock::config::DefaultsFile::PerUser());
     Log::Line("[boot] config: port=%u enableOnStartup=%d localSmoothing=%.2f "
-              "remoteSmoothing=%.2f position=%d",
+              "remoteSmoothing=%.2f rotation=%d position=%d",
               static_cast<unsigned>(g_config.udp_port), g_config.enable_on_startup ? 1 : 0,
               g_config.local_smoothing, g_config.remote_smoothing,
-              g_config.position_enabled ? 1 : 0);
+              g_config.rotation_enabled ? 1 : 0, g_config.position_enabled ? 1 : 0);
 
     ApplyConfigToPipeline(g_config, g_session);
     g_trackingEnabled.store(g_config.enable_on_startup);
@@ -332,7 +246,7 @@ void Bootstrap() {
         return;
     }
 
-    LoadAndApplyConfig(exeDir);
+    LoadAndApplyConfig(exeDirWide);
 
     g_receiver.SetLog([](const std::string& msg) { Log::Line("[udp] %s", msg.c_str()); });
     if (g_receiver.Start(g_config.udp_port)) {
@@ -350,12 +264,9 @@ void Bootstrap() {
 
     RegisterHotkeys(g_config);
     g_active.store(true);
-    Log::Line("[boot] ready. %s/Ctrl+Shift+%s toggle tracking, "
-              "%s/Ctrl+Shift+%s cycle tracking mode.",
-              HotkeyName(g_config.toggle_key).c_str(),
-              HotkeyName(g_config.chord_toggle_key).c_str(),
-              HotkeyName(g_config.cycle_mode_key).c_str(),
-              HotkeyName(g_config.chord_cycle_mode_key).c_str());
+    Log::Line("[boot] ready. ToggleKey=%s toggles tracking, CycleTrackingModeKey=%s cycles "
+              "the tracking mode.",
+              g_config.toggle_key.c_str(), g_config.cycle_tracking_mode_key.c_str());
 }
 
 }  // namespace

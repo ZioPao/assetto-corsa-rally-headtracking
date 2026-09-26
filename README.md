@@ -4,6 +4,8 @@
 
 An unofficial head tracking mod for Assetto Corsa Rally that moves the camera with your head while your wheel or controller keeps steering, driven by OpenTrack over UDP, with no VR headset required.
 
+Settings live in `CameraUnlock.ini` next to `acr.exe`. Updating from an earlier version reads your `HeadTracking.ini` into it once and leaves `HeadTracking.ini` as it was; the sensitivity and axis inversion settings are gone, and the mode you pick with the cycle hotkey is saved. See [Configuration](#configuration).
+
 ## Features
 
 - **Works with any OpenTrack compatible tracker** - free options available for PC, iOS and Android
@@ -11,7 +13,7 @@ An unofficial head tracking mod for Assetto Corsa Rally that moves the camera wi
 ## Requirements
 
 - [Assetto Corsa Rally](https://store.steampowered.com/app/3917090/) on Steam, a legitimately purchased copy.
-- A tracker that sends OpenTrack UDP pose data to port `4242` (`[Network] UdpPort` in `HeadTracking.ini`): one 48-byte datagram of six little-endian 64-bit floats, `x, y, z, yaw, pitch, roll`. [OpenTrack](https://github.com/opentrack/opentrack) sends that from any of its inputs (webcam, TrackIR, Tobii, SteamVR). A phone app can send it straight to this PC if it has an OpenTrack or UDP output option; [Headcam](https://headcam.app) does, for free. See [Setting Up OpenTrack](#setting-up-opentrack).
+- A tracker that sends OpenTrack UDP pose data to port `4242` (`[Network] UdpPort` in `CameraUnlock.ini`): one 48-byte datagram of six little-endian 64-bit floats, `x, y, z, yaw, pitch, roll`. [OpenTrack](https://github.com/opentrack/opentrack) sends that from any of its inputs (webcam, TrackIR, Tobii, SteamVR). A phone app can send it straight to this PC if it has an OpenTrack or UDP output option; [Headcam](https://headcam.app) does, for free. See [Setting Up OpenTrack](#setting-up-opentrack).
 - Windows 10 or 11, 64-bit.
 
 ## Installation
@@ -27,7 +29,7 @@ Download [Lopari](https://lopari.app), choose **Assetto Corsa Rally**, and click
 2. Extract it anywhere.
 3. Double-click `install.cmd`. It finds the game and drops the loader and the mod next to `acr.exe`.
 4. Point your tracker at UDP port `4242`. OpenTrack on the same PC sends to `127.0.0.1`; a phone app sends to your PC's local network IP instead, because `127.0.0.1` on a phone is the phone.
-5. Launch the game. The mod writes a default `HeadTracking.ini` and a log next to the EXE on first run.
+5. Launch the game. The mod creates `CameraUnlock.ini` and a log next to the EXE on first run.
 
 If the installer cannot find your game, point it at the install folder yourself. Either set the environment variable:
 
@@ -111,7 +113,7 @@ view sits off to one side, centre it in the tracker.
 
 ## Controls
 
-Two equivalent binding sets - use whichever your keyboard has:
+Two equivalent binding sets by default - use whichever your keyboard has:
 
 | Action              | Nav-cluster | Chord          |
 |---------------------|-------------|----------------|
@@ -127,33 +129,122 @@ Two equivalent binding sets - use whichever your keyboard has:
 
 The mod never picks a centre on its own. It uses whatever your tracker sends, so centre it in your tracker app while sitting how you drive.
 
-Every one of these keys is remappable through `[Hotkeys]` in `HeadTracking.ini`, both the nav-cluster key and the chord letter, which is worth doing if your button box or a wheel plugin already sits on one of them.
+The tracking mode you pick is saved to `CameraUnlock.ini` as you change it, so the game starts in it next time. `End` changes the current session only: whether tracking is on when the game starts is `EnableOnStartup`.
+
+Each action's keys are a list in `CameraUnlock.ini` (`ToggleKey`, `CycleTrackingModeKey`), written as key names, so either binding can be changed or removed there, which is worth doing if your button box or a wheel plugin already sits on one of them.
 
 ## Configuration
 
-`HeadTracking.ini` is written next to `acr.exe` on first run. Edit it and restart the game to apply.
+`CameraUnlock.ini` is read once at startup, so a restart applies your edits. A value the mod cannot read keeps its default, and `HeadTracking.log` names the line.
 
-| Setting | Default | Notes |
-|---|---|---|
-| `[Network] UdpPort` | `4242` | OpenTrack standard. Must be `1024`-`65535` |
-| `[General] EnableOnStartup` | `1` | |
-| `[Hotkeys] ToggleKey / CycleModeKey` | `0x23` / `0x21` | The nav-cluster keys, as [Windows virtual-key codes](https://learn.microsoft.com/windows/win32/inputdev/virtual-key-codes) in hex |
-| `[Hotkeys] ChordToggleKey / ChordCycleModeKey` | `0x59` / `0x47` | The letter in the `Ctrl+Shift+` chord for the same two actions |
-| `[Rotation] Yaw/Pitch/RollSensitivity` | `1.0` | |
-| `[Rotation] InvertYaw/Pitch/Roll` | `0` | Set the one that runs backwards for your tracker |
-| `[Rotation] LocalSmoothing` | `0.0` | `0.0`-`1.0`, used when the tracker runs on this PC. Covers rotation and position |
-| `[Rotation] RemoteSmoothing` | `0.15` | `0.0`-`1.0`, used when the tracker is a device on the network (e.g. a phone over WiFi). Covers rotation and position. |
-| `[Camera] NearClipCm` | `1.0` | Near clip plane in centimetres while tracking is driving the view. The game's own 5.0 sits further from your eye than your seat back, so looking over a shoulder would clip the seat away and show the world through it. `0` turns the adjustment off and leaves the game's value alone, as does a negative value; anything positive is clamped to `0.1`-`100`. |
-| `[Position] Enabled` | `1` | |
-| `[Position] SensitivityX/Y/Z` | `1.0` | |
-| `[Position] InvertX/Y/Z` | `0` | Set the one that runs backwards for your tracker. Separate from the `[Rotation]` inversions |
-| `[Position] LimitX / LimitY` | `0.15` / `0.12` m | Sized for a cabin: the door and roll cage are a forearm away |
-| `[Position] LimitZ` | `0.20` m | Lean in toward the windscreen. Larger values put your eye out over the bonnet |
-| `[Position] LimitZBack` | `0.0` m | Backward travel, off by default: strapped into a rally seat your head is already against the headrest, so every centimetre granted here is spent moving your eye into the seat |
+<!-- cameraunlock:config -->
+The mod reads its settings from `acr\Binaries\Win64\CameraUnlock.ini` in the game folder, and creates the file when it starts and finds none. Edit it with any text editor.
 
-Travel limits accept `0`-`10` m and sensitivities `-100`-`100`, far past anything usable; a value outside a setting's range is replaced and the substitution is written to the log, as is a value the mod could not read as a number at all.
+A setting set to `default` takes its value from `Defaults.ini`, which every head tracking mod that keeps its settings in `CameraUnlock.ini` reads. Head tracking mods that keep their settings in another file do not read it, and neither do earlier versions of this mod. Writing a value in place of `default` changes that setting for this game only. When the mod saves a setting that a hotkey changed in game, it writes the new value in place of `default`, so that setting no longer follows `Defaults.ini` in this game until you set it to `default` again.
 
-Hotkeys are codes, not key names: `ToggleKey=Insert` is refused, `ToggleKey=0x2D` is the same key. They are read as hex, so a bare `24` is `0x24`. Common ones are `Home` `0x24`, `End` `0x23`, `Insert` `0x2D`, `Delete` `0x2E`, `Page Up` `0x21`, `Page Down` `0x22`, `F1`-`F12` `0x70`-`0x7B`, `A`-`Z` `0x41`-`0x5A`, numpad `0`-`9` `0x60`-`0x69`. `Ctrl`, `Shift` and `Alt` cannot be bound - they are what the chord itself is made of. A code the mod refuses leaves that action on its previous key and says so in the log; the log also names every key it ended up bound to, so check there first if a remap did not take.
+`Defaults.ini` is `%AppData%\CameraUnlock\Defaults.ini` on Windows; `$XDG_CONFIG_HOME/CameraUnlock/Defaults.ini` on Linux, or `~/.config/CameraUnlock/Defaults.ini` where `XDG_CONFIG_HOME` is not set, under Wine and Proton too; and `~/Library/Application Support/CameraUnlock/Defaults.ini` on macOS. The mod's log, where it writes one, names the file it read.
+
+When the mod starts and finds no `Defaults.ini`, it creates one holding the built-in values, unless Windows runs the game as a packaged app. The mod never changes `Defaults.ini` after that. Edit it with any text editor.
+
+Earlier versions of the mod kept these settings in `HeadTracking.ini`, in the same folder. The first time this version starts and finds no `CameraUnlock.ini`, it reads your settings from `HeadTracking.ini` and writes them into `CameraUnlock.ini`. It never changes `HeadTracking.ini`, and does not read it again while `CameraUnlock.ini` exists.
+
+A setting that the defaults below set to `default` is written as `default` when the value imported for it equals its default at that start, which is the value `Defaults.ini` gives it, or the built-in value where `Defaults.ini` gives none. It then follows `Defaults.ini`. Every other setting is written with the value imported for it. `RotationEnabled` and `PositionEnabled` are one setting here, the tracking mode, so both are written as `default` or neither is.
+
+Comments, and keys the mod never read, are not carried over. Nor are these, where your old file had them:
+
+- Reticle settings, and a key that toggled the reticle.
+- A sensitivity, scale, deadzone, response curve or axis inversion you changed from its default. Set these in your tracker instead.
+- The setting for a feature that earlier versions shipped switched off while it was untested. It now follows the mod's default.
+
+An older version of the mod reads `HeadTracking.ini` and never reads `CameraUnlock.ini`, so a setting you change after updating is not in `HeadTracking.ini`.
+
+Deleting only `CameraUnlock.ini` makes the next start read `HeadTracking.ini` again. To go back to the defaults, replace everything in `CameraUnlock.ini` with the defaults below. Every setting they set to `default` then follows `Defaults.ini`.
+
+The built-in value of each setting set to `default` below:
+
+- `UdpPort=4242`
+- `EnableOnStartup=true`
+- `RotationEnabled=true`
+- `LocalSmoothing=0.0`
+- `RemoteSmoothing=0.15`
+- `PositionEnabled=true`
+- `PositionLimitX=0.3`
+- `PositionLimitY=0.2`
+- `PositionLimitYDown=0.2`
+- `PositionLimitZ=0.4`
+- `PositionLimitZBack=0.1`
+- `ToggleKey=End, Ctrl+Shift+Y`
+- `CycleTrackingModeKey=PageUp, Ctrl+Shift+G`
+
+With every setting at its default, the file reads:
+
+```ini
+; Assetto Corsa Rally head tracking settings.
+; Comments start with ; and go on their own line. Text after a value is part of the value.
+; Hotkeys are key names such as End, PageUp or Ctrl+Shift+Y. Separate several with commas; leave empty for none.
+; A setting set to default takes its value from Defaults.ini, which every head tracking mod
+; that keeps its settings in CameraUnlock.ini reads: %AppData%\CameraUnlock\Defaults.ini on
+; Windows, $XDG_CONFIG_HOME/CameraUnlock/Defaults.ini (normally ~/.config/CameraUnlock) on
+; Linux, under Wine and Proton too, and ~/Library/Application Support/CameraUnlock/Defaults.ini
+; on macOS. The log names the file it read. Write a value instead of default to change that
+; setting for this game only.
+
+[CameraUnlock]
+; Written by the mod. Leave this section in place.
+ConfigFormat=1
+
+[Network]
+; UDP port the mod receives tracker data on (OpenTrack protocol).
+UdpPort=default
+
+[General]
+; true: head tracking is on when the game starts. ToggleKey turns it on and off.
+EnableOnStartup=default
+; true: turning your head turns the view.
+; Tracking mode at startup, with PositionEnabled. The mode hotkey changes both.
+RotationEnabled=default
+
+[Smoothing]
+; Smoothing when the tracker runs on this PC. 0 is the least, 1 the most.
+LocalSmoothing=default
+; Smoothing when the tracker is another device on the network, such as a phone.
+; 0 is the least, 1 the most.
+RemoteSmoothing=default
+
+[Position]
+; true: moving your head moves the view.
+; Tracking mode at startup, with RotationEnabled. The mode hotkey changes both.
+PositionEnabled=default
+; How far, in metres, leaning left or right can move the view.
+PositionLimitX=default
+; How far, in metres, raising your head can move the view.
+PositionLimitY=default
+; How far, in metres, lowering your head can move the view.
+PositionLimitYDown=default
+; How far, in metres, leaning forward can move the view.
+PositionLimitZ=default
+; How far, in metres, leaning back can move the view.
+PositionLimitZBack=default
+
+[Hotkeys]
+; Turns head tracking on and off.
+ToggleKey=default
+; Changes the tracking mode: rotation and position, rotation only, position only.
+CycleTrackingModeKey=default
+
+[Camera]
+; Near clip plane in centimetres, applied while head tracking is driving the view.
+; The game's own 5.0 sits further from your eye than the seat back behind you, so
+; looking over a shoulder clips the seat away and you see straight through it.
+; Pulling the plane in renders it instead. 0 leaves the game's value alone; any
+; other value is from 0.1 to 100.0.
+NearClipCm=1.0
+```
+<!-- /cameraunlock:config -->
+
+Earlier versions started with cabin-sized position limits: 0.15 m to either side, 0.12 m up and down, 0.20 m forward and none back, because 0.40 m forward puts your eye out over the bonnet and 0.10 m back puts it inside the seat. A `HeadTracking.ini` imported from one of those versions keeps the limits it held, so nothing changes for you. A new `CameraUnlock.ini` sets the limits to `default`, whose built-in values are 0.3 m to either side, 0.2 m up and down, 0.4 m forward and 0.1 m back. For the cabin-sized limits, write `PositionLimitX=0.15`, `PositionLimitY=0.12`, `PositionLimitYDown=0.12`, `PositionLimitZ=0.2` and `PositionLimitZBack=0.0` in it.
+
+`[Camera] NearClipCm` pulls the near clip plane in from the game's 5 cm while tracking is driving the view, so the seat back and headrest beside your head render when you look over a shoulder instead of being clipped away.
 
 ## Troubleshooting
 
@@ -161,7 +252,7 @@ Hotkeys are codes, not key names: `ToggleKey=Insert` is refused, `ToggleKey=0x2D
 
 **"the object table never appeared" or "no camera manager appeared".** The mod waits for the engine to build a world before it hooks anything, and stays dormant if that never happens. Load into a session and check the log again.
 
-**The view moves the wrong way on one axis.** Set the matching `Invert…` to `1` in `HeadTracking.ini`. Trackers disagree about axis signs; that is what those settings are for.
+**The view moves the wrong way on one axis.** Invert that axis in your tracker. The mod applies the pose as the tracker sends it and has no inversion settings of its own.
 
 **Looking around does not tilt with the car when it is banked or over a crest.** That is deliberate. Head turns are about the world's up axis, so the turn stays level with the horizon however far the car is leaning. Turning about the car's own up axis instead is what a head strapped into a seat physically does, but it tilts the horizon every time you look into an apex, which is worse to drive to.
 
@@ -171,9 +262,9 @@ Hotkeys are codes, not key names: `ToggleKey=Insert` is refused, `ToggleKey=0x2D
 
 **The view drifts away from centre.** Centre in your tracker app while sitting how you drive: opentrack's Center bind, the CENTER button in Headcam, SteamVR's reset. The mod keeps no centre of its own and applies the pose the tracker sends.
 
-**My head goes into the seat, or out through the windscreen.** The positional limits decide how far the camera may travel from where the game put it, and they ship cabin-sized for exactly this reason: `LimitZBack` is `0` so you cannot reverse into the headrest, and `LimitZ` is `0.20` m so leaning in stops short of the glass. Raise them if you want more room and can live with the intersections.
+**My head goes into the seat, or out through the windscreen.** The positional limits in `CameraUnlock.ini` decide how far the camera may travel from where the game put it. `PositionLimitZBack=0.0` stops you reversing into the headrest, and `PositionLimitZ=0.2` stops a lean in short of the glass; see [Configuration](#configuration) for the cabin-sized set.
 
-**Some of the cockpit vanishes when I look at it up close.** That is the near clip plane cutting away geometry nearer to your eye than it allows. `[Camera] NearClipCm` pulls it in to 1 cm; lower it further (`0.5`) if anything still disappears.
+**Some of the cockpit vanishes when I look at it up close.** That is the near clip plane cutting away geometry nearer to your eye than it allows. `[Camera] NearClipCm` in `CameraUnlock.ini` pulls it in to 1 cm; lower it further (`0.5`) if anything still disappears.
 
 **Head tracking does nothing in the menus.** That is deliberate. It follows your head only while the camera is on your car, so the menus, the car showcase, the loading screens and the service park are left as the game renders them.
 
@@ -181,7 +272,7 @@ Hotkeys are codes, not key names: `ToggleKey=Insert` is refused, `ToggleKey=0x2D
 
 ## Updating and uninstalling
 
-Re-run `install.cmd` to update - it overwrites the mod and leaves your `HeadTracking.ini` alone. Run `uninstall.cmd` to remove the mod and the loader; add `/force` to remove the loader even if something else installed it. Your config file is never deleted.
+Re-run `install.cmd` to update - it overwrites the mod and leaves `CameraUnlock.ini` and `HeadTracking.ini` alone. Run `uninstall.cmd` to remove the mod and the loader; add `/force` to remove the loader even if something else installed it. `CameraUnlock.ini` and `HeadTracking.ini` are kept, and so is `Defaults.ini`.
 
 ## Building from source
 

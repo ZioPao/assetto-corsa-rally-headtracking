@@ -1,14 +1,9 @@
 // The frozen HeadTracking.ini reader in src/legacy_config/, and the round
-// trip: generate the shipped HeadTracking.ini, read it back over a Config
-// whose every member has been poisoned, and require the result to be the
-// shipped defaults.
-//
-// That is what keeps kDefaultIniText and the Config member initialisers in
-// step. They are two independent copies of the same numbers, and a default
-// changed in one and not the other is invisible - the mod behaves one way on a
-// fresh install and another way for anyone whose INI predates the change.
+// trip: read v1.1.0's first-run HeadTracking.ini back over a Config whose
+// every member has been poisoned, and require the result to be the frozen
+// defaults, so every key the published build wrote is one the reader reads at
+// the value its default holds.
 
-#include "config.h"
 #include "legacy_config/config_sanitize.h"
 #include "legacy_config/legacy_config.h"
 #include "test_support.h"
@@ -192,34 +187,17 @@ void CheckMatchesDefaults(const Config& loaded, const char* label) {
     }
 }
 
-void GeneratedIniLoadsBackAsTheShippedDefaults() {
+void PublishedFirstRunFileReadsBackAsTheDefaults() {
     const TempDirectory dir;
     dir.RemoveIni();
-    acr_ht::WriteDefaultConfigIfMissing(dir.Path());
+    const std::string firstRun =
+        ReadWholeFile(std::string(ACR_HT_SOURCE_DIR) + "\\tests\\config_differential\\data\\first-run-v1.1.0.ini");
+    Check(g_failures, !firstRun.empty(), "v1.1.0's first-run file is in the test data");
+    WriteFileBytes(dir.IniPath(), firstRun.data(), firstRun.size());
 
     Config loaded = Poisoned();
     acr_ht::legacy::Load(dir.IniPath(), loaded);
-    CheckMatchesDefaults(loaded, "the generated INI reads back as the shipped defaults");
-}
-
-void AnExistingConfigIsNeverOverwritten() {
-    const TempDirectory dir;
-    dir.RemoveIni();
-
-    const char kUserIni[] = "[Network]\nUdpPort=5000\n";
-    WriteFileBytes(dir.IniPath(), kUserIni, sizeof(kUserIni) - 1);
-
-    acr_ht::WriteDefaultConfigIfMissing(dir.Path());
-
-    // Byte-for-byte, not "the setting I checked survived". Appending the
-    // defaults to a user's file leaves the first UdpPort winning, so a
-    // value-only assertion stays green while the file has been mangled.
-    Check(g_failures, ReadWholeFile(dir.IniPath()) == std::string(kUserIni),
-          "an existing config is left exactly as the user wrote it");
-
-    Config loaded;
-    acr_ht::legacy::Load(dir.IniPath(), loaded);
-    Check(g_failures, loaded.udp_port == 5000, "an existing config is not overwritten");
+    CheckMatchesDefaults(loaded, "v1.1.0's first-run file reads back as the frozen defaults");
 }
 
 void AMissingConfigLeavesTheCallersValuesAlone() {
@@ -250,7 +228,7 @@ void OutOfRangeValuesFallBackRatherThanReachingTheEngine() {
     // from a reset-to-default. It cannot distinguish either from "the key is
     // never read at all", because a refusal and a missing read both leave the
     // caller's value untouched - that is what
-    // GeneratedIniLoadsBackAsTheShippedDefaults covers, by requiring every key
+    // PublishedFirstRunFileReadsBackAsTheDefaults covers, by requiring every key
     // to round trip.
     loaded.local_smoothing = 0.5f;
     loaded.remote_smoothing = 0.5f;
@@ -512,8 +490,7 @@ void HotkeysAreRemappable() {
 int RunLegacyReaderTests() {
     std::cout << "\nFrozen HeadTracking.ini reader\n";
     g_failures = 0;
-    GeneratedIniLoadsBackAsTheShippedDefaults();
-    AnExistingConfigIsNeverOverwritten();
+    PublishedFirstRunFileReadsBackAsTheDefaults();
     AMissingConfigLeavesTheCallersValuesAlone();
     OutOfRangeValuesFallBackRatherThanReachingTheEngine();
     MalformedValuesAreRefusedRatherThanMisread();

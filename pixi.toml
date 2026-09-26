@@ -27,10 +27,19 @@ build-debug = { cmd = "cmake --build build --config Debug", depends-on = ["setup
 
 # The game-process-free half of the mod: the frozen HeadTracking.ini reader,
 # the executable path handling, the camera composition and the detour's
-# clean-pose table, then the config differential test, which holds the frozen
-# reader to v1.1.0's. Runs the binaries directly rather than through ctest so a
-# failing assertion's name reaches the console.
-test = { cmd = "cmake --build build --config Release --target acr_ht_tests acr_ht_config_differential && build/tests/Release/acr_ht_tests.exe && build/tests/Release/acr_ht_config_differential.exe", depends-on = ["setup"] }
+# clean-pose table; the committed CameraUnlock.ini against the config table and
+# the saves; the config differential test, which holds the frozen reader to
+# v1.1.0's and the migration into CameraUnlock.ini to the frozen reader; and
+# core's canonical config lint over every file that test migrated. Runs the
+# binaries directly rather than through ctest so a failing assertion's name
+# reaches the console.
+test = { cmd = "cmake --build build --config Release --target acr_ht_tests acr_ht_config_tests acr_ht_config_differential && build/tests/Release/acr_ht_tests.exe && build/tests/Release/acr_ht_config_tests.exe && build/tests/Release/acr_ht_config_differential.exe && node tests/config_differential/lint-migrated.mjs build/tests/Release/migrated", depends-on = ["setup"] }
+
+# Rewrites config/CameraUnlock.ini, the committed file, from the config table
+# after a change to a row, a comment or a default, then writes the launcher
+# manifest's config descriptor per_game from it. acr_ht_config_tests fails
+# until it has run.
+render-config = { cmd = "cmake --build build --config Release --target acr_ht_config_tests && build/tests/Release/acr_ht_config_tests.exe --render-config config/CameraUnlock.ini && node cameraunlock-core/scripts/encode-seed.mjs", depends-on = ["setup"] }
 
 clean = { cmd = """
     powershell -Command "if (Test-Path 'build') { Remove-Item 'build' -Recurse -Force }; Write-Host 'Build artifacts cleaned' -ForegroundColor Green"
@@ -60,10 +69,16 @@ package = { cmd = "powershell -ExecutionPolicy Bypass -File scripts/package-rele
 
 uninstall = "scripts/uninstall.cmd /y"
 
+# Checks the newest release/*-installer.zip against the launcher manifest rules
+# and the canonical config's delivery rules, and the Nexus ZIP for a config.
+# Run after package.
+validate-manifest = "node cameraunlock-core/scripts/validate-manifest.mjs"
+
 release = "powershell -ExecutionPolicy Bypass -File scripts/release.ps1"
 
 [dependencies]
 # CMake and Visual Studio come from the system. Node runs cameraunlock-core's
-# config descriptor check, which packaging calls, pinned to the release core's
-# own lock resolves.
+# canonical config lint, its config descriptor check, which packaging calls,
+# and render-config's encode-seed step, pinned to the release core's own lock
+# resolves.
 nodejs = "==26.5.0"

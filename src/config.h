@@ -1,40 +1,44 @@
 #pragma once
 
 #include <cstdint>
+#include <filesystem>
 #include <string>
 
+#include "cameraunlock/config/config_concepts.g.h"
+#include "cameraunlock/config/config_owner.h"
+#include "cameraunlock/config/defaults_file.h"
+#include "cameraunlock/config/legacy_import.h"
+#include "cameraunlock/data/position_settings.h"
 #include "cameraunlock/math/smoothing_utils.h"
+#include "cameraunlock/tracking/tracking_mode.h"
 
 namespace acr_ht {
 
+// The settings CameraUnlock.ini holds, at their defaults.
 struct Config {
-    // Held as the socket's own type so an out-of-range INI value cannot reach
-    // UdpReceiver::Start by silently truncating to a wrong 16-bit port.
+    // Held as the socket's own type so a port the file names always fits it.
     std::uint16_t udp_port = 4242;
     bool enable_on_startup = true;
 
-    // Windows virtual-key codes. Each action has a nav-cluster key and a
-    // Ctrl+Shift+<key> chord, and both fire it - the chord exists for keyboards
-    // with no nav cluster. Defaults: End, PgUp, and the Y/G chord letters.
-    int toggle_key = 0x23;
-    int cycle_mode_key = 0x21;
-    int chord_toggle_key = 0x59;
-    int chord_cycle_mode_key = 0x47;
-
-    float yaw_sensitivity = 1.0f;
-    float pitch_sensitivity = 1.0f;
-    float roll_sensitivity = 1.0f;
-    bool invert_yaw = false;
-    bool invert_pitch = false;
-    bool invert_roll = false;
+    // The tracking mode at startup, the pair the mode hotkey saves.
+    bool rotation_enabled = true;
+    bool position_enabled = true;
 
     // Smoothing is chosen per connection from the packet's source address, and
-    // both values cover rotation and position alike. A tracker running on this
-    // machine is already steady, so local_smoothing is 0.0 and nothing floors
-    // it; a phone on WiFi jitters over the network, which is what
-    // remote_smoothing is for.
+    // both values cover rotation and position alike.
     float local_smoothing = static_cast<float>(cameraunlock::math::kDefaultLocalSmoothing);
     float remote_smoothing = static_cast<float>(cameraunlock::math::kDefaultRemoteSmoothing);
+
+    float position_limit_x = cameraunlock::PositionSettings{}.limit_x;
+    float position_limit_y = cameraunlock::PositionSettings{}.limit_y;
+    float position_limit_y_down = cameraunlock::PositionSettings{}.limit_y_down;
+    float position_limit_z = cameraunlock::PositionSettings{}.limit_z;
+    float position_limit_z_back = cameraunlock::PositionSettings{}.limit_z_back;
+
+    std::string toggle_key =
+        cameraunlock::config::schema::ConceptTraits<cameraunlock::config::schema::Concept::ToggleKey>::kCanonicalDefault;
+    std::string cycle_tracking_mode_key = cameraunlock::config::schema::ConceptTraits<
+        cameraunlock::config::schema::Concept::CycleTrackingModeKey>::kCanonicalDefault;
 
     // Near clip plane, in centimetres, used while head tracking is driving the
     // view. The game ships 5 cm, which is further from the eye than the
@@ -42,35 +46,42 @@ struct Config {
     // them away and shows the world through the seat. Pulling the plane in
     // renders them instead. 0 leaves whatever the game set.
     float near_clip_cm = 1.0f;
-
-    bool position_enabled = true;
-    float position_sensitivity_x = 1.0f;
-    float position_sensitivity_y = 1.0f;
-    float position_sensitivity_z = 1.0f;
-    bool invert_position_x = false;
-    bool invert_position_y = false;
-    bool invert_position_z = false;
-    // Cabin-sized, not the room-sized defaults the shared pipeline ships.
-    // The camera starts at a driver's eye point in a rally car: the headrest is
-    // touching the back of the head, the windscreen is an arm's length ahead,
-    // and the door and roll cage are within a forearm either side. The stock
-    // 0.40 m of forward travel puts the eye out over the bonnet and the stock
-    // 0.10 m of backward travel puts it inside the seat, which is what a head
-    // "clipping through the headrest" actually is.
-    //
-    // Backward is zero on purpose. A driver strapped into a rally seat has
-    // their head against the headrest already - there is nowhere to go, and
-    // every centimetre of travel granted here is a centimetre of seat to see
-    // the inside of. Raise it if you sit forward of the headrest and want to
-    // pull back; anything above a few centimetres will start to intersect.
-    float limit_x = 0.15f;
-    float limit_y = 0.12f;
-    float limit_z = 0.20f;
-    float limit_z_back = 0.0f;
 };
 
-// Writes the documented default HeadTracking.ini into `exe_dir`, unless one is
-// already there. Never overwrites a user's file.
-void WriteDefaultConfigIfMissing(const std::string& exe_dir);
-
 }  // namespace acr_ht
+
+// CameraUnlock.ini, beside acr.exe, in cameraunlock-core's canonical config
+// format. One ConfigOwner reads and writes it; nothing else in the mod touches
+// it. HeadTracking.ini, the file every earlier build read, is imported once
+// while CameraUnlock.ini is absent and is never written.
+namespace acr_ht::config {
+
+cameraunlock::config::ConfigTable<Config> Table();
+
+cameraunlock::config::RenderHeader Header();
+
+// HeadTracking.ini through the frozen reader in src/legacy_config/, mapped into
+// Config.
+cameraunlock::config::LegacyImport<Config> Import();
+
+// The owner's options for CameraUnlock.ini in `folder`, with HeadTracking.ini
+// beside it as the legacy file and Defaults.ini where `defaults` says.
+cameraunlock::config::ConfigOwnerOptions<Config> OwnerOptions(const std::filesystem::path& folder,
+                                                              cameraunlock::config::DefaultsFile defaults);
+
+// Reads, imports or creates CameraUnlock.ini in `folder`, logs what the owner
+// reports, and returns the settings the session runs on. Call once, from the
+// bootstrap thread, with the log open. `defaults` is DefaultsFile::PerUser() in
+// the mod.
+Config Load(const std::filesystem::path& folder, cameraunlock::config::DefaultsFile defaults);
+
+// The tracking mode the settings start in. The table never gives both rows
+// false.
+cameraunlock::TrackingMode StartupTrackingMode(const Config& config);
+
+// Saves the mode the cycle hotkey has just applied. The session keeps it
+// whether or not the save succeeds; a failed save is logged. Called on the
+// hotkey thread, after Load.
+void SaveTrackingMode(cameraunlock::TrackingMode mode);
+
+}  // namespace acr_ht::config

@@ -6,3 +6,4 @@
 *.zip binary
 tests/config_differential/data/** -text
 tests/config_differential/oracle/** -text
+config/CameraUnlock.ini -text
