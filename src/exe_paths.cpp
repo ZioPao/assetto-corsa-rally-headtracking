@@ -45,10 +45,9 @@ bool NarrowToAnsi(const std::wstring& wide, std::string& narrow) {
 
     // Best-fit mapping is on by default for the ANSI code page: a character
     // with no encoding is quietly replaced by one that looks similar, so a
-    // directory can narrow to the name of a DIFFERENT directory that exists -
-    // and the config is then read from, and written to, the wrong one.
-    // WC_NO_BEST_FIT_CHARS plus the used-default flag turns that into a
-    // refusal.
+    // directory can narrow to the name of a DIFFERENT directory that exists,
+    // and the log would then name the wrong folder. WC_NO_BEST_FIT_CHARS plus
+    // the used-default flag turns that into a refusal.
     //
     // The Unicode transformations need neither, because they can represent
     // every character - and WideCharToMultiByte rejects both outright for
@@ -85,11 +84,9 @@ bool ExeDirectory(std::wstring& wide, std::string& narrow) {
     if (!DirectoryOf(path, directory)) return false;
 
     wide = directory;
-    // The log takes the UTF-16 form and always works. Only the ANSI INI layer
-    // needs the narrow one, so a directory the code page cannot represent
-    // costs the config file and nothing else - which is a far better outcome
-    // than a mod that refuses to run, and a far safer one than a best-fit
-    // approximation naming somebody else's folder.
+    // The log file and the config owner take the UTF-16 form. The narrow one
+    // only feeds the log's printf lines, so a directory the code page cannot
+    // represent costs one log line and nothing else.
     if (!NarrowToAnsi(directory, narrow)) narrow.clear();
     return true;
 }
