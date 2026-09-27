@@ -12,7 +12,6 @@
 #include "logging.h"
 
 #include "cameraunlock/config/value_codecs.h"
-#include "cameraunlock/input/key_bindings.h"
 
 namespace acr_ht::config {
 
@@ -20,16 +19,12 @@ namespace {
 
 namespace cfg = ::cameraunlock::config;
 using cfg::schema::Concept;
-using ::cameraunlock::input::FormatKeyBindings;
-using ::cameraunlock::input::KeyModifiers;
 
 constexpr const wchar_t* kIniName = L"CameraUnlock.ini";
 constexpr const wchar_t* kLegacyIniName = L"HeadTracking.ini";
 
 // data/games.json's display_name for assetto-corsa-rally.
 constexpr const char* kDisplayName = "Assetto Corsa Rally";
-
-constexpr KeyModifiers kChord = KeyModifiers::kCtrl | KeyModifiers::kShift;
 
 // [Camera] NearClipCm: 0, which leaves the game's plane alone, or a distance
 // from 0.1 to 100 centimetres. A plane nearer than 0.1 cm leaves the depth
@@ -113,15 +108,40 @@ cfg::ImportResult RunImport(const cfg::LegacyInput& input, Config& out) {
     out.position_limit_z = read.limit_z;
     out.position_limit_z_back = read.limit_z_back;
 
-    // Each action had a nav key and the letter of its Ctrl+Shift chord. The
-    // reader holds both to a code from 0x01 to 0xFE that is not a modifier, so
-    // neither can be out of range.
-    out.toggle_key = FormatKeyBindings({{KeyModifiers::kNone, read.toggle_key}, {kChord, read.chord_toggle_key}});
+    // Each action had a nav key and the letter of its Ctrl+Shift chord.
+    const auto bindings = [&](int key, const char* key_name, int chord, const char* chord_name) {
+        std::string list = cfg::LegacyVirtualKeyToBindings(key, "Hotkeys", key_name, dropped);
+        const std::string chord_key = cfg::LegacyVirtualKeyToBindings(chord, "Hotkeys", chord_name, dropped);
+        if (!chord_key.empty()) list += (list.empty() ? "Ctrl+Shift+" : ", Ctrl+Shift+") + chord_key;
+        return list;
+    };
+    out.toggle_key = bindings(read.toggle_key, "ToggleKey", read.chord_toggle_key, "ChordToggleKey");
     out.cycle_tracking_mode_key =
-        FormatKeyBindings({{KeyModifiers::kNone, read.cycle_mode_key}, {kChord, read.chord_cycle_mode_key}});
+        bindings(read.cycle_mode_key, "CycleModeKey", read.chord_cycle_mode_key, "ChordCycleModeKey");
 
-    return present ? cfg::ImportResult::Imported(std::move(dropped), std::move(pose_shaping))
-                   : cfg::ImportResult::Absent(std::move(dropped), std::move(pose_shaping));
+    // A setting the player never changed from what v1.1.0 wrote follows
+    // Defaults.ini, the position limits included, whose v1.1.0 defaults were
+    // smaller than the built-in ones. LimitY stood for both vertical bounds,
+    // and each hotkey for its key and its chord key together.
+    const legacy::Config shipped;
+    cfg::LegacyFollowsDefaultsIni follows;
+    follows.Setting(Concept::UdpPort, read.udp_port, shipped.udp_port);
+    follows.Setting(Concept::EnableOnStartup, read.enable_on_startup, shipped.enable_on_startup);
+    follows.TrackingMode(read.position_enabled, shipped.position_enabled);
+    follows.Setting(Concept::LocalSmoothing, read.local_smoothing, shipped.local_smoothing);
+    follows.Setting(Concept::RemoteSmoothing, read.remote_smoothing, shipped.remote_smoothing);
+    follows.Setting(Concept::PositionLimitX, read.limit_x, shipped.limit_x);
+    follows.Setting(Concept::PositionLimitY, read.limit_y, shipped.limit_y);
+    follows.Setting(Concept::PositionLimitYDown, read.limit_y, shipped.limit_y);
+    follows.Setting(Concept::PositionLimitZ, read.limit_z, shipped.limit_z);
+    follows.Setting(Concept::PositionLimitZBack, read.limit_z_back, shipped.limit_z_back);
+    follows.Setting(Concept::ToggleKey,
+                    read.toggle_key == shipped.toggle_key && read.chord_toggle_key == shipped.chord_toggle_key);
+    follows.Setting(Concept::CycleTrackingModeKey, read.cycle_mode_key == shipped.cycle_mode_key &&
+                                                       read.chord_cycle_mode_key == shipped.chord_cycle_mode_key);
+
+    return present ? cfg::ImportResult::Imported(std::move(dropped), std::move(pose_shaping), follows.Concepts())
+                   : cfg::ImportResult::Absent(std::move(dropped), std::move(pose_shaping), follows.Concepts());
 }
 
 }  // namespace

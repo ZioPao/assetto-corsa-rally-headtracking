@@ -12,7 +12,7 @@
 
 - Settings move to `acr\Binaries\Win64\CameraUnlock.ini`. Earlier versions of the mod kept these settings in `HeadTracking.ini`, in the same folder. The first time this version starts and finds no `CameraUnlock.ini`, it reads your settings from `HeadTracking.ini` and writes them into `CameraUnlock.ini`. It never changes `HeadTracking.ini`, and does not read it again while `CameraUnlock.ini` exists.
 - A first start with no `HeadTracking.ini` no longer writes one. It creates `CameraUnlock.ini` instead.
-- A setting that the defaults the README shows set to `default` is written as `default` when the value imported for it equals its default at that start, which is the value `Defaults.ini` gives it, or the built-in value where `Defaults.ini` gives none. It then follows `Defaults.ini`. Every other setting is written with the value imported for it.
+- A setting that the defaults the README shows set to `default` is written as `default` when you never changed it from the default earlier versions used, because `HeadTracking.ini` does not hold it or holds that default. It then follows `Defaults.ini`, so it takes the value `Defaults.ini` gives it, or the built-in value where `Defaults.ini` gives none, which can differ from the default earlier versions used. A setting you changed is written with the value imported for it, or as `default` where that value equals its default at that start.
 - `RotationEnabled` and `PositionEnabled` are one setting here, the tracking mode, so both are written as `default` or neither is.
 - Comments, and keys the mod never read, are not carried over. Nor is this, where your old file had it:
   - A sensitivity or axis inversion you changed from its default. Set these in your tracker instead.
@@ -23,7 +23,7 @@
 - `[Position] Enabled = false` is imported as the startup tracking mode, rotation only.
 - `UdpPort` in `CameraUnlock.ini` takes any port from 1 to 65535. Earlier versions refused a port below 1024 and ran on 4242, and a `HeadTracking.ini` holding one is imported as 4242, the port it ran on.
 - The keys are renamed to the names every head tracking mod on `CameraUnlock.ini` uses: `LocalSmoothing` and `RemoteSmoothing` move from `[Rotation]` to `[Smoothing]`, and the lean limits are `PositionLimitX`, `PositionLimitY`, `PositionLimitYDown`, `PositionLimitZ` (forward) and `PositionLimitZBack` (back). `LimitY` limited lowering your head as well as raising it, so it is imported into both `PositionLimitY` and `PositionLimitYDown`.
-- A new `CameraUnlock.ini` sets the lean limits to `default`, whose built-in values are 0.3 m to either side, 0.2 m up and down, 0.4 m forward and 0.1 m back. Earlier versions started with 0.15 m, 0.12 m, 0.20 m forward and none back. A `HeadTracking.ini` from an earlier version is imported with the limits it held, or those when it held none, so an update changes nothing; the README says how to set the smaller limits in a new file.
+- A new `CameraUnlock.ini` sets the lean limits to `default`, whose built-in values are 0.3 m to either side, 0.2 m up and down, 0.4 m forward and 0.1 m back. Earlier versions started with 0.15 m, 0.12 m, 0.20 m forward and none back. A limit your `HeadTracking.ini` did not hold, or held at that old default, is one you never changed, so it is imported as `default` and after the update runs on the built-in value, or the value `Defaults.ini` gives it, as on a new install. A limit you changed is imported with the value you set. The README says how to set the smaller limits.
 
 ### Removed
 
