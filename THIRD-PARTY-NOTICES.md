@@ -15,7 +15,7 @@ Assetto Corsa Rally.
 | injector | `f7fd18f` (inside Ultimate ASI Loader v9.7.2) | zlib | Compiled into the vendored dinput8.dll |
 | miniz | 3.0.0 (inside Ultimate ASI Loader v9.7.2) | MIT | Compiled into the vendored dinput8.dll |
 | MinHook | `9fbd08743270` | BSD-2-Clause | Compiled into `AssettoCorsaRallyHeadTracking.asi` |
-| cameraunlock-core | b4df73a5d8076968fcbf7e4088dd49db11a2684e | MIT | Compiled into `AssettoCorsaRallyHeadTracking.asi` |
+| cameraunlock-core | ba57f8488cf98be2148f4f6640125c5d1e5fb3ca | MIT | Compiled into `AssettoCorsaRallyHeadTracking.asi` |
 | OpenTrack | n/a | ISC | Not bundled; UDP protocol interoperability only |
 
 ---
@@ -249,7 +249,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Git submodule at `cameraunlock-core/`, compiled into `AssettoCorsaRallyHeadTracking.asi`. Our own code,
 MIT licensed, reproduced here so the notices are complete.
 
-- Pinned commit: `b4df73a5d8076968fcbf7e4088dd49db11a2684e`
+- Pinned commit: `ba57f8488cf98be2148f4f6640125c5d1e5fb3ca`
 
 ```
 MIT License
