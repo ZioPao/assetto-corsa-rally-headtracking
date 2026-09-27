@@ -2,12 +2,11 @@
 
 ![Assetto Corsa Rally running with this mod](https://raw.githubusercontent.com/itsloopyo/assetto-corsa-rally-headtracking/main/assets/readme-clip.gif)
 
-An unofficial head tracking mod for Assetto Corsa Rally that moves the camera with your head while your wheel or controller keeps steering, driven by OpenTrack over UDP, with no VR headset required.
-
-Settings live in `CameraUnlock.ini` next to `acr.exe`. Updating from an earlier version reads your `HeadTracking.ini` into it once and leaves `HeadTracking.ini` as it was; the sensitivity and axis inversion settings are gone, and the mode you pick with the cycle hotkey is saved. See [Configuration](#configuration).
+An unofficial head tracking mod for Assetto Corsa Rally that moves the camera with your head while your wheel or controller keeps steering, driven by a webcam, phone, or any OpenTrack compatible tracker, with no VR headset required.
 
 ## Features
 
+- **6DOF tracking** - yaw, pitch and roll plus positional lean, peek and duck
 - **Works with any OpenTrack compatible tracker** - free options available for PC, iOS and Android
 
 ## Requirements
@@ -242,7 +241,7 @@ NearClipCm=1.0
 ```
 <!-- /cameraunlock:config -->
 
-Earlier versions started with cabin-sized position limits: 0.15 m to either side, 0.12 m up and down, 0.20 m forward and none back, because 0.40 m forward puts your eye out over the bonnet and 0.10 m back puts it inside the seat. A `HeadTracking.ini` imported from one of those versions keeps the limits it held, so nothing changes for you. A new `CameraUnlock.ini` sets the limits to `default`, whose built-in values are 0.3 m to either side, 0.2 m up and down, 0.4 m forward and 0.1 m back. For the cabin-sized limits, write `PositionLimitX=0.15`, `PositionLimitY=0.12`, `PositionLimitYDown=0.12`, `PositionLimitZ=0.2` and `PositionLimitZBack=0.0` in it.
+The default position limits are 0.3 m to either side, 0.2 m up and down, 0.4 m forward and 0.1 m back. In a rally cockpit 0.4 m forward puts your eye out over the bonnet and 0.1 m back puts it inside the seat. For limits sized to the cabin, write `PositionLimitX=0.15`, `PositionLimitY=0.12`, `PositionLimitYDown=0.12`, `PositionLimitZ=0.2` and `PositionLimitZBack=0.0` in it.
 
 `[Camera] NearClipCm` pulls the near clip plane in from the game's 5 cm while tracking is driving the view, so the seat back and headrest beside your head render when you look over a shoulder instead of being clipped away.
 
@@ -272,7 +271,7 @@ Earlier versions started with cabin-sized position limits: 0.15 m to either side
 
 ## Updating and uninstalling
 
-Re-run `install.cmd` to update - it overwrites the mod and leaves `CameraUnlock.ini` and `HeadTracking.ini` alone. Run `uninstall.cmd` to remove the mod and the loader; add `/force` to remove the loader even if something else installed it. `CameraUnlock.ini` and `HeadTracking.ini` are kept, and so is `Defaults.ini`.
+Re-run `install.cmd` to update - it overwrites the mod and leaves `CameraUnlock.ini` alone. Run `uninstall.cmd` to remove the mod and the loader; add `/force` to remove the loader even if something else installed it. `CameraUnlock.ini` and `Defaults.ini` are kept.
 
 ## Building from source
 
