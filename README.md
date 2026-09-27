@@ -255,9 +255,13 @@ The default position limits are 0.3 m to either side, 0.2 m up and down, 0.4 m f
 
 **The view stops following my head when I pause.** Also deliberate, and handled separately: pausing leaves the camera sitting on your car, so the mod asks the engine whether the game is paused rather than relying on where the camera is pointed. The view holds where it is and resumes when you do.
 
-## Updating and uninstalling
+## Updating
 
-Re-run `install.cmd` to update - it overwrites the mod and leaves `CameraUnlock.ini` alone. Run `uninstall.cmd` to remove the mod and the loader; add `/force` to remove the loader even if something else installed it. `CameraUnlock.ini` and `Defaults.ini` are kept.
+Re-run `install.cmd` to update - it overwrites the mod and leaves `CameraUnlock.ini` alone.
+
+## Uninstalling
+
+Run `uninstall.cmd` to remove the mod and the loader; add `/force` to remove the loader even if something else installed it. `CameraUnlock.ini` and `Defaults.ini` are kept.
 
 ## Building from source
 
@@ -300,5 +304,7 @@ licence.
 - [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) by ThirteenAG.
 - [MinHook](https://github.com/TsudaKageyu/minhook) by Tsuda Kageyu.
 - [OpenTrack](https://github.com/opentrack/opentrack) for the tracking protocol.
+
+## Disclaimer
 
 This mod is not affiliated with or endorsed by Supernova Games Studios or Kunos Simulazioni.
