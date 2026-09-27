@@ -227,7 +227,7 @@ NearClipCm=1.0
 ```
 <!-- /cameraunlock:config -->
 
-The default position limits are 0.3 m to either side, 0.2 m up and down, 0.4 m forward and 0.1 m back. In a rally cockpit 0.4 m forward puts your eye out over the bonnet and 0.1 m back puts it inside the seat. For limits sized to the cabin, write `PositionLimitX=0.15`, `PositionLimitY=0.12`, `PositionLimitYDown=0.12`, `PositionLimitZ=0.2` and `PositionLimitZBack=0.0` in it.
+The default position limits are 0.3 m to either side, 0.2 m up and down, 0.4 m forward and 0.1 m back. Version 1.1.0 and earlier used smaller limits. To get them back, write `PositionLimitX=0.15`, `PositionLimitY=0.12`, `PositionLimitYDown=0.12`, `PositionLimitZ=0.2` and `PositionLimitZBack=0.0` in it.
 
 `[Camera] NearClipCm` pulls the near clip plane in from the game's 5 cm while tracking is driving the view, so the seat back and headrest beside your head render when you look over a shoulder instead of being clipped away.
 
@@ -247,7 +247,7 @@ The default position limits are 0.3 m to either side, 0.2 m up and down, 0.4 m f
 
 **The view drifts away from centre.** Centre in your tracker app while sitting how you drive: opentrack's Center bind, the CENTER button in Headcam, SteamVR's reset. The mod keeps no centre of its own and applies the pose the tracker sends.
 
-**My head goes into the seat, or out through the windscreen.** The positional limits in `CameraUnlock.ini` decide how far the camera may travel from where the game put it. `PositionLimitZBack=0.0` stops you reversing into the headrest, and `PositionLimitZ=0.2` stops a lean in short of the glass; see [Configuration](#configuration) for the cabin-sized set.
+**My head goes into the seat, or out through the windscreen.** The positional limits in `CameraUnlock.ini` decide how far the camera may travel from where the game put it. `PositionLimitZBack=0.0` stops the view moving back at all, and a smaller `PositionLimitZ` shortens how far a forward lean goes; see [Configuration](#configuration) for the smaller set earlier versions used.
 
 **Some of the cockpit vanishes when I look at it up close.** That is the near clip plane cutting away geometry nearer to your eye than it allows. `[Camera] NearClipCm` in `CameraUnlock.ini` pulls it in to 1 cm; lower it further (`0.5`) if anything still disappears.
 
