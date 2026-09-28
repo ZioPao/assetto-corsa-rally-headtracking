@@ -32,8 +32,11 @@ build-debug = { cmd = "cmake --build build --config Debug", depends-on = ["setup
 # v1.1.0's and the migration into CameraUnlock.ini to the frozen reader; and
 # core's canonical config lint over every file that test migrated. Runs the
 # binaries directly rather than through ctest so a failing assertion's name
-# reaches the console.
-test = { cmd = "cmake --build build --config Release --target acr_ht_tests acr_ht_config_tests acr_ht_config_differential && build/tests/Release/acr_ht_tests.exe && build/tests/Release/acr_ht_config_tests.exe && build/tests/Release/acr_ht_config_differential.exe && node tests/config_differential/lint-migrated.mjs build/tests/Release/migrated", depends-on = ["setup"] }
+# reaches the console. test-unit is everything but the differential and its
+# lint, which run on the release paths as test-differential.
+test-unit = { cmd = "cmake --build build --config Release --target acr_ht_tests acr_ht_config_tests && build/tests/Release/acr_ht_tests.exe && build/tests/Release/acr_ht_config_tests.exe", depends-on = ["setup"] }
+test-differential = { cmd = "cmake --build build --config Release --target acr_ht_config_differential && build/tests/Release/acr_ht_config_differential.exe && node tests/config_differential/lint-migrated.mjs build/tests/Release/migrated", depends-on = ["setup"] }
+test = { depends-on = ["test-unit", "test-differential"] }
 
 # Rewrites config/CameraUnlock.ini, the committed file, from the config table
 # after a change to a row, a comment or a default, then writes the launcher
@@ -63,9 +66,9 @@ update-deps = { cmd = "powershell -ExecutionPolicy Bypass -File scripts/update-d
 # so the two package different core revisions - and the resulting dirty tree
 # then trips release.ps1's clean-tree check. Bumping the submodule is what
 # `pixi run sync` is for, and it leaves a commit behind.
-# Depends on test, so no ZIP is built from a tree whose tests or config
-# differential test fail.
-package = { cmd = "powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1 -NoRefresh", depends-on = ["build", "test"] }
+# Depends on test-unit, so no ZIP is built from a tree whose unit tests fail.
+# The config differential test runs on the release paths.
+package = { cmd = "powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1 -NoRefresh", depends-on = ["build", "test-unit"] }
 
 uninstall = "scripts/uninstall.cmd /y"
 
